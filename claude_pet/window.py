@@ -268,7 +268,8 @@ class PetWindow(Gtk.Window):
         counts: dict[str, int] = {}
         for sess in self.sessions:  # já vêm do mais urgente pro menos
             counts[sess.status] = counts.get(sess.status, 0) + 1
-        return f"{name}: " + ", ".join(f"{n} {STATUS_LABEL.get(st, st)}" for st, n in counts.items())
+        return f"{name}: " + ", ".join(f"{n} {'chat' if n == 1 else 'chats'} {STATUS_LABEL.get(st, st)}"
+                                     for st, n in counts.items())
 
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
