@@ -1,6 +1,7 @@
 """O desenho do Bit (robô) na tela: animação, inclinação de pêndulo e nuvem de pensamento."""
 from __future__ import annotations
 
+import math
 import time
 
 import cairo
@@ -60,18 +61,18 @@ class RobotSkin:
         if abs(lean) < 0.02:
             sprites.render(cr, pose, scale, body_color)
             return
-        # pêndulo: desenha fora da tela e cola linha por linha, cada uma deslizando
-        # proporcional à distância do topo (onde o mouse segura)
+        # pêndulo: gira o robô inteiro em volta da antena (onde o mouse "segura").
+        # Desenha fora da tela e gira a imagem com filtro "pixel mais próximo": nítido, sem frestas.
         n = self.canvas * scale
         off = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)
         sprites.render(cairo.Context(off), pose, scale, body_color)
-        top = sprites.OY
-        for row in range(self.canvas):
-            shift = round(lean * (row - top)) * scale if row > top else 0
-            cr.save()
-            cr.rectangle(shift, row * scale, n, scale)
-            cr.clip()
-            cr.set_source_surface(off, shift, 0)
-            cr.get_source().set_filter(cairo.FILTER_NEAREST)
-            cr.paint()
-            cr.restore()
+        angle = -math.atan(lean)  # corpo fica pra trás do movimento
+        pivot_x, pivot_y = (sprites.OX + 10) * scale, sprites.OY * scale
+        cr.save()
+        cr.translate(pivot_x, pivot_y)
+        cr.rotate(angle)
+        cr.translate(-pivot_x, -pivot_y)
+        cr.set_source_surface(off, 0, 0)
+        cr.get_source().set_filter(cairo.FILTER_NEAREST)
+        cr.paint()
+        cr.restore()
