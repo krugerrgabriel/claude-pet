@@ -46,231 +46,191 @@ def mirror_x(grid):
     return [row[::-1] for row in grid]
 
 
-# ====================================================================== PATO
-DUCK_PAL = {k: rgba(v) for k, v in {
-    "O": "#6b3e1f",   # contorno marrom
-    "o": "#8a5426",   # contorno suave (dentro)
-    "H": "#fffbe3",   # brilho
-    "L": "#ffec7a",   # luz
-    "Y": "#ffd23c",   # base
-    "S": "#f6a92e",   # sombra (puxa pro laranja)
-    "D": "#d9802a",   # sombra funda
-    "B": "#ff9a3c",   # bico/pés
-    "b": "#e0672a",   # bico/pés sombra
-    "R": "#b83a3a",   # boca aberta
-    "E": "#2a1a12",   # olho
-    "W": "#ffffff",   # brilho do olho
-    "C": "#ffab8f",   # bochecha
-    "G": "#9aa6bd",   # notebook claro
-    "g": "#77839b",   # notebook
-    "K": "#ffe066",   # logo aceso
-    "k": "#4a5263",   # base do notebook
+# ====================================================================== PATO (perfil)
+# Desenho geométrico em pixel: cada parte é uma elipse; silhueta = união → contorno automático;
+# sombreamento pela posição dentro da elipse (luz de cima/esquerda).
+DUCK = {k: rgba(v) for k, v in {
+    "out": "#7a4318", "wing_out": "#e39a2c",
+    "hi": "#fffbe0", "light": "#ffef8a", "base": "#ffd43b", "shade": "#f5a524", "deep": "#de8420",
+    "bill": "#ff9b3d", "bill_hi": "#ffc07a", "bill_lo": "#e8682a", "bill_out": "#9c3f14",
+    "eye": "#2a1a12", "shine": "#ffffff", "cheek": "#ff9c86", "mouth": "#c4413a",
+    "lap": "#8d99b3", "lap_d": "#6a758e", "lap_hi": "#b4bfd4", "lap_logo": "#ffe066", "lap_base": "#4a5263",
+    "screen": "#8ff0ff",
 }.items()}
+SIZE = 34
 
-DUCK_BODY = [
-    "......OOOO......",
-    "....OOLLLLOO....",
-    "...OLLHHLLLLO...",
-    "..OLHHLLLYYYYO..",
-    ".OLHLLYYYYYYYYO.",
-    ".OLLYYYYYYYYYYO.",
-    "OLLYYYYYYYYYYYSO",
-    "OLYYYYYYYYYYYYSO",
-    "OYYYYYYYYYYYYYSO",
-    "OYYYYYYYYYYYYSSO",
-    "OYYYYYYYYYYYYSSO",
-    ".OSYYYYYYYYYSSO.",
-    ".OSSYYYYYYYSSDO.",
-    "..ODSSSSSSSSDO..",
-    "...OODDDDDDOO...",
-    ".....OOOOOO.....",
-]
-DUCK_TUFT = [
-    "..OO",
-    ".OLO",
-    "OLO.",
-    ".O..",
-]
-DUCK_WINGS = {  # asa esquerda (x, y relativos ao corpo); a direita é espelhada
-    "down": ([
-        "..O",
-        ".OY",
-        "OYS",
-        "OYS",
-        "OSO",
-        ".O.",
-    ], -2, 7),
-    "up": ([
-        ".OO.",
-        "OYYO",
-        "OYSO",
-        "OYSO",
-        ".OSO",
-        "..OO",
-    ], -3, 1),
-    "out": ([
-        ".OO.",
-        "OYYO",
-        "OSSO",
-        ".OO.",
-    ], -4, 7),
-    "type": ([
-        ".OO.",
-        "OYSO",
-        ".OO.",
-    ], 2, 10),
-    "type_up": ([
-        ".OO.",
-        "OYSO",
-        ".OO.",
-    ], 2, 9),
-    "chin": ([
-        ".OO.",
-        "OYYO",
-        "OSSO",
-        ".OO.",
-    ], 1, 9),
-}
-DUCK_FOOT = ["OBBO", "ObbbO"]
-EYES = {  # (grade, dx, dy) relativo à posição do olho (x, 6)
-    "open": (["WE", "EE", "EE"], 0, 0),
-    "up": (["WE", "EE"], 0, -1),
-    "down": (["EE", "EE"], 0, 1),
-    "closed": (["EE"], 0, 2),
-    "happy": ([".E.", "E.E"], -0, 1),
-    "wide": (["WWE", "WEE", "EEE"], 0, -1),
-}
-BEAKS = {
-    "closed": [".BBBB.", "Obbbb O".replace(" ", "")[:6]],
-    "open": [".BBBB.", ".bRRb.", "..bb.."],
-}
-BEAKS["closed"] = [".BBBB.", "..bb.."]
+
+def ellipse(cx, cy, rx, ry):
+    pts = set()
+    for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
+        for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
+            if ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1.0:
+                pts.add((x, y))
+    return pts
+
+
+def tone(nx, ny, levels=("hi", "light", "base", "shade", "deep")):
+    """Tom pela posição normalizada dentro da forma (-1..1). Luz de cima/esquerda."""
+    l = -0.55 * nx - 0.85 * ny
+    if l > 0.95:
+        return levels[0]
+    if l > 0.35:
+        return levels[1]
+    if l > -0.45:
+        return levels[2]
+    if l > -0.95:
+        return levels[3]
+    return levels[4]
+
+
+def paint_shape(px, pts, cx, cy, rx, ry, levels=None):
+    for (x, y) in pts:
+        if 0 <= x < SIZE and 0 <= y < SIZE:
+            px[x, y] = DUCK[tone((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry, *( [levels] if levels else []))]
+
+
+def outline(img, mask, color):
+    px = img.load()
+    for (x, y) in mask:
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in mask and 0 <= n[0] < SIZE and 0 <= n[1] < SIZE and px[n][3] == 0:
+                px[n] = color
 
 
 def duck_frame(pose: dict) -> Image.Image:
-    """Monta um quadro do pato a partir de uma pose (dict)."""
-    size = 30
-    img = Image.new("RGBA", (size, size), CLEAR)
+    img = Image.new("RGBA", (SIZE, SIZE), CLEAR)
+    px = img.load()
     sit = pose.get("sit", False)
-    bx = 7
-    by = size - len(DUCK_BODY) - (0 if sit else 2) + pose.get("dy", 0)
+    bob = pose.get("dy", 0)
+    ground = SIZE - 1
 
-    # pés (atrás do corpo quando sentado: aparecem na frente, apontando pra gente)
+    # ---- geometria
+    body = (14.0, ground - 8.4 + (3 if sit else 0) + bob, 8.5, 5.6)
+    tail = (5.6, body[1] - 4.2, 2.6, 2.2)
+    hdx, hdy = pose.get("head", (0, 0))
+    head = (19.5 + hdx, body[1] - 8.6 + hdy, 5.6, 5.2)
+
+    # ---- pés (atrás do corpo): perninha + pé de pato achatado apontando pra frente
+    def put(x, y, c):
+        if 0 <= x < SIZE and 0 <= y < SIZE:
+            px[x, y] = DUCK[c]
+
     feet = pose.get("feet", "stand")
-    if sit:
-        stamp(img, ["OBBO", ".OO."], DUCK_PAL, bx + 2, by + 13)
-        stamp(img, ["OBBO", ".OO."], DUCK_PAL, bx + 10, by + 13)
-    elif feet != "none":
-        lift_l = {"stepL": 1, "dangle": 0}.get(feet, 0)
-        lift_r = {"stepR": 1}.get(feet, 0)
-        fy = by + len(DUCK_BODY) - 1
-        if feet == "dangle":
-            stamp(img, ["OBO", "ObO", ".O."], DUCK_PAL, bx + 4, fy)
-            stamp(img, ["OBO", "ObO", ".O."], DUCK_PAL, bx + 9, fy + 1)
-        else:
-            stamp(img, DUCK_FOOT, DUCK_PAL, bx + 3, fy - lift_l)
-            stamp(img, DUCK_FOOT, DUCK_PAL, bx + 9, fy - lift_r)
+    if not sit:
+        top = int(body[1] + body[3]) - 1
+        spots = {"stand": [(11, 0), (16, 0)], "stepA": [(10, 0), (17, 2)], "stepB": [(12, 2), (15, 0)],
+                 "dangle": [(11, 0), (16, 1)]}[feet]
+        for fx, lift in spots:
+            foot_y = (top + 3 + lift) if feet == "dangle" else (ground - 1 - lift)
+            for y in range(top, foot_y):
+                put(fx, y, "bill_lo")
+            for dx in range(-1, 3):
+                put(fx + dx, foot_y, "bill" if dx < 2 else "bill_lo")
+                put(fx + dx, foot_y + 1, "bill_out")
+            put(fx - 2, foot_y, "bill_out")
+            put(fx + 3, foot_y, "bill_out")
 
-    stamp(img, DUCK_TUFT, DUCK_PAL, bx + 6, by - 3)
-    stamp(img, DUCK_BODY, DUCK_PAL, bx, by)
+    # ---- silhueta: rabo + corpo + cabeça
+    shapes = [(tail, ellipse(*tail)), (body, ellipse(*body)), (head, ellipse(*head))]
+    sil = set().union(*(pts for _, pts in shapes))
+    for geo, pts in shapes:
+        paint_shape(px, pts, *geo)
+    outline(img, sil, DUCK["out"])
 
-    # rosto
-    look = pose.get("look", 0)
+    # ---- bico (achatado, apontando pra frente)
+    hx, hy = head[0], head[1]
+    bx0 = int(hx + head[2]) - 1
+    by0 = int(hy + 0.5)
+    open_bill = pose.get("bill", "closed") == "open"
+    upper = [(bx0 + i, by0) for i in range(5)] + [(bx0 + i, by0 + 1) for i in range(5)]
+    lower = [(bx0 + i, by0 + 2 + (1 if open_bill else 0)) for i in range(4)]
+    for (x, y) in upper:
+        px[x, y] = DUCK["bill_hi"] if y == by0 and x < bx0 + 4 else DUCK["bill"]
+    for (x, y) in lower:
+        px[x, y] = DUCK["bill_lo"]
+    if open_bill:
+        for i in range(3):
+            px[bx0 + i, by0 + 2] = DUCK["mouth"]
+    bill_mask = set(upper) | set(lower) | ({(bx0 + i, by0 + 2) for i in range(3)} if open_bill else set())
+    for (x, y) in bill_mask:
+        for n in ((x + 1, y), (x, y - 1), (x, y + 1)):
+            if n not in bill_mask and n not in sil and 0 <= n[0] < SIZE and px[n][3] == 0:
+                px[n] = DUCK["bill_out"]
+    px[bx0 + 5, by0 + 1] = DUCK["bill_out"]
+
+    # ---- olho, bochecha
+    ex, ey = int(hx + 1.5), int(hy - 2.5)
+    look_up = pose.get("eyes") == "up"
     eyes = pose.get("eyes", "open")
-    grid, edx, edy = EYES[eyes]
-    for ex in (4, 10):
-        stamp(img, grid, DUCK_PAL, bx + ex + look + edx - (1 if eyes == "happy" else 0)
-              - (0 if ex == 4 or eyes not in ("wide",) else 0), by + 6 + edy)
-    if pose.get("blush", True):
-        stamp(img, ["CC"], DUCK_PAL, bx + 2, by + 9)
-        stamp(img, ["CC"], DUCK_PAL, bx + 12, by + 9)
-    beak = BEAKS[pose.get("beak", "closed")]
-    stamp(img, beak, DUCK_PAL, bx + 5 + look, by + 9)
+    if eyes in ("open", "up", "down"):
+        oy = -1 if look_up else (1 if eyes == "down" else 0)
+        for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)):
+            px[ex + dx, ey + dy + oy] = DUCK["eye"]
+        px[ex, ey + oy] = DUCK["shine"]
+    elif eyes == "wide":
+        for dx in range(3):
+            for dy in range(3):
+                px[ex - 1 + dx, ey - 1 + dy] = DUCK["eye"]
+        px[ex - 1, ey - 1] = DUCK["shine"]
+        px[ex, ey - 1] = DUCK["shine"]
+        for dx in range(3):
+            px[ex - 1 + dx, ey + 2] = DUCK["eye"]
+    elif eyes == "closed":
+        px[ex - 1, ey + 1] = DUCK["eye"]
+        px[ex, ey + 2] = DUCK["eye"]
+        px[ex + 1, ey + 2] = DUCK["eye"]
+        px[ex + 2, ey + 1] = DUCK["eye"]
+    elif eyes == "happy":
+        px[ex - 1, ey + 2] = DUCK["eye"]
+        px[ex, ey + 1] = DUCK["eye"]
+        px[ex + 1, ey + 1] = DUCK["eye"]
+        px[ex + 2, ey + 2] = DUCK["eye"]
+    px[ex - 1, ey + 4] = DUCK["cheek"]
+    px[ex, ey + 4] = DUCK["cheek"]
+    if pose.get("blush"):
+        px[ex + 1, ey + 4] = DUCK["cheek"]
 
-    # notebook na frente (tampa virada pra gente), atrás das mãos
+    # ---- notebook na frente: base no chão + tela inclinada virada pro pato (com brilho)
     if pose.get("laptop"):
-        lap = [
-            "OOOOOOOOOOOO",
-            "OGGGGGGGGGGO",
-            "OGggggKgggggO"[:12],
-            "OGgggKKKgggO",
-            "OOOOOOOOOOOO",
-        ]
-        stamp(img, lap, DUCK_PAL, bx + 2, by + 10)
-        stamp(img, ["kkkkkkkkkkkkkk", ".OOOOOOOOOOOO."], DUCK_PAL, bx + 1, by + 15)
+        lx = int(hx + 3)
+        for x in range(lx - 3, lx + 6):
+            put(x, ground - 1, "lap")
+            put(x, ground - 2, "lap_hi" if x < lx + 5 else "lap")
+            put(x, ground, "out")
+        put(lx - 4, ground - 1, "out")
+        put(lx - 4, ground - 2, "out")
+        for k in range(7):  # tela: sobe inclinada pra direita
+            x, y = lx + 5 + k // 3, ground - 3 - k
+            put(x - 1, y, "screen")
+            put(x, y, "lap_d")
+            put(x + 1, y, "out")
+            put(x - 2, y, "out") if k in (0, 6) else None
+        put(lx + 4, ground - 3 - 7, "out")
+        put(lx + 5, ground - 3 - 7, "out")
 
-    # asas
-    wl, wr = pose.get("wings", ("down", "down"))
-    for side, kind in (("L", wl), ("R", wr)):
-        grid, wx, wy = DUCK_WINGS[kind]
-        w = len(grid[0])
-        if side == "L":
-            stamp(img, grid, DUCK_PAL, bx + wx, by + wy)
-        else:
-            stamp(img, mirror_x(grid), DUCK_PAL, bx + 16 - wx - w, by + wy)
+    # ---- asa (no flanco, com contorno próprio mais suave)
+    wing = pose.get("wing", "fold")
+    wgeo = {
+        "fold": (12.5, body[1] - 0.2, 4.0, 2.5),
+        "up": (11.5, body[1] - 4.5, 2.8, 4.4),
+        "out": (10.0, body[1] - 1.5, 5.4, 2.4),
+        "type": (19.0, body[1] - 0.5, 3.6, 2.2),
+        "type_up": (19.0, body[1] - 1.5, 3.6, 2.2),
+        "chin": (19.5, body[1] - 3.5, 2.6, 3.2),
+    }[wing]
+    wpts = ellipse(*wgeo)
+    for (x, y) in wpts:
+        if 0 <= x < SIZE and 0 <= y < SIZE:
+            px[x, y] = DUCK[tone((x + 0.5 - wgeo[0]) / wgeo[2], (y + 0.5 - wgeo[1]) / wgeo[3],
+                                 ("light", "light", "base", "shade", "deep"))]
+    for (x, y) in wpts:
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in wpts and 0 <= n[0] < SIZE and 0 <= n[1] < SIZE:
+                px[n] = DUCK["out"] if n not in sil else DUCK["wing_out"]
+    if wing == "fold":  # penas: duas marquinhas
+        px[int(wgeo[0] - 2), int(wgeo[1] + 1)] = DUCK["wing_out"]
+        px[int(wgeo[0]), int(wgeo[1] + 1)] = DUCK["wing_out"]
     return img
-
-
-def duck_anims():
-    F = duck_frame
-    cut = lambda img, n: stretch_rows(img, 21, n)  # noqa: E731  linha da barriga: estica sem mexer no rosto
-
-    def blinky(pose, n=12, breath=True):
-        base = F(pose)
-        frames = [base] * (n - 4)
-        if breath:
-            frames += [cut(base, 1), cut(base, 1)]
-        frames += [base, F(dict(pose, eyes="closed"))]
-        return frames
-
-    walk = lambda extra: [  # noqa: E731
-        shift(shear(F(dict(extra, feet="stepL", wings=extra.get("wings", ("out", "down")))), 1 / 22), 0, -1),
-        cut(F(dict(extra, feet="stand")), -1),
-        shift(shear(F(dict(extra, feet="stepR", wings=extra.get("wings2", ("down", "out")))), -1 / 22), 0, -1),
-        cut(F(dict(extra, feet="stand")), -1),
-    ]
-    think_pose = {"eyes": "up", "wings": ("down", "chin"), "look": 1}
-    hop = lambda pose, alt, h: [  # noqa: E731
-        cut(F(pose), -2),
-        shift(cut(F(alt), 1), 0, -h // 2),
-        shift(F(pose), 0, -h),
-        shift(F(alt), 0, -h),
-        shift(cut(F(pose), 1), 0, -h // 2),
-        cut(F(alt), -2),
-    ]
-    alert = {"eyes": "wide", "beak": "open", "wings": ("up", "up")}
-    alert2 = dict(alert, wings=("out", "out"))
-    party = {"eyes": "happy", "beak": "open", "wings": ("up", "up")}
-    party2 = dict(party, wings=("out", "out"))
-    sit = {"sit": True}
-    work = {"sit": True, "laptop": True, "eyes": "down"}
-    happy = {"eyes": "happy", "wings": ("out", "down")}
-
-    def c(frames, overlay=None, count=None):
-        count = count or len(frames)
-        return [(frames[i % len(frames)], overlay, i) for i in range(count)]
-
-    return {
-        "stand": (4, c(blinky({}))),
-        "curious": (4, c([shear(f, 1 / 26) for f in blinky({"look": 1}, 10, False)])),
-        "walk": (8, c(walk({"look": 1}))),
-        "sit": (3, c(blinky(sit))),
-        "sleep": (2, c([F(dict(sit, eyes="closed")), cut(F(dict(sit, eyes="closed")), 1)], "zzz", 4)),
-        "think": (3, c([F(think_pose), shear(F(think_pose), 1 / 30), F(think_pose), shear(F(think_pose), -1 / 30)],
-                       "thought")),
-        "think_walk": (7, c(walk(dict(think_pose, wings=("down", "chin"), wings2=("down", "chin"))), "thought", 8)),
-        "work": (8, c([F(dict(work, wings=("type_up", "type"))), F(dict(work, wings=("type", "type_up"))),
-                       F(dict(work, wings=("type_up", "type"))), cut(F(dict(work, wings=("type", "type"))), 1)])),
-        "attention": (10, c(hop(alert, alert2, 6), "bang")),
-        "celebrate": (10, c(hop(party, party2, 8), "sparkle")),
-        "waiting": (3, c([F(dict(sit, eyes="happy"))] * 4 + [F(dict(sit, eyes="happy", wings=("down", "up"))),
-                          F(dict(sit, eyes="happy", wings=("down", "out")))] * 2 + [F(dict(sit, eyes="happy"))],
-                         "check")),
-        "happy": (6, c([cut(F(happy), -1), F(dict(happy, wings=("down", "out"))), cut(F(happy), 1),
-                        F(dict(happy, wings=("down", "out")))], "heart")),
-        "dangle": (6, c([F({"feet": "dangle", "eyes": "wide", "beak": "open", "wings": ("out", "up")}),
-                         F({"feet": "dangle", "eyes": "wide", "beak": "open", "wings": ("up", "out")})])),
-    }
 
 
 def build(name, anims, meta):
@@ -298,6 +258,65 @@ def build(name, anims, meta):
     strip.save(folder / "anims.png")
     (folder / "anims.json").write_text(json.dumps({"canvas": size, **meta, "anims": out}, indent=1))
     print(f"{name}: {len(frames)} quadros únicos, canvas {size}")
+
+
+def duck_anims():
+    F = duck_frame
+    cut = lambda img, n: stretch_rows(img, SIZE - 7, n)  # noqa: E731  barriga: estica sem mexer na cabeça
+
+    def c(frames, overlay=None, count=None):
+        count = count or len(frames)
+        return [(frames[i % len(frames)], overlay, i) for i in range(count)]
+
+    def idle(pose, n=14):
+        base = F(pose)
+        return [base] * (n - 5) + [F(dict(pose, head=(0, 1))), F(dict(pose, head=(0, 1))), base, base,
+                                   F(dict(pose, eyes="closed"))]
+
+    def walk(pose):
+        return [
+            F(dict(pose, feet="stepA", dy=-1, head=(1, -1), wing=pose.get("wing", "fold"))),
+            F(dict(pose, feet="stand", dy=0, head=(0, 0))),
+            F(dict(pose, feet="stepB", dy=-1, head=(1, -1), wing=pose.get("wing2", pose.get("wing", "fold")))),
+            F(dict(pose, feet="stand", dy=0, head=(0, 0))),
+        ]
+
+    def hop(a, b, h):
+        return [
+            cut(F(dict(a, head=(0, 1))), -1),
+            shift(F(dict(b, head=(0, -1))), 0, -h // 2),
+            shift(F(dict(a, head=(0, -1))), 0, -h),
+            shift(F(dict(b, head=(0, -1))), 0, -h),
+            shift(F(dict(a, head=(0, 0))), 0, -h // 2),
+            cut(F(dict(b, head=(0, 1))), -1),
+        ]
+
+    think = {"eyes": "up", "wing": "chin", "head": (0, -1)}
+    sit = {"sit": True}
+    work = {"sit": True, "laptop": True, "eyes": "down"}
+    alert = {"eyes": "wide", "bill": "open", "wing": "up"}
+    party = {"eyes": "happy", "bill": "open", "wing": "up", "blush": True}
+    happy = {"eyes": "happy", "blush": True}
+    return {
+        "stand": (4, c(idle({}))),
+        "curious": (4, c(idle({"head": (1, 0)}, 10))),
+        "walk": (8, c(walk({}))),
+        "sit": (3, c(idle(sit))),
+        "sleep": (2, c([F(dict(sit, eyes="closed", head=(-1, 2))), F(dict(sit, eyes="closed", head=(-1, 3)))],
+                       "zzz", 4)),
+        "think": (3, c([F(think), F(dict(think, head=(1, -1))), F(think), F(dict(think, head=(0, 0)))], "thought")),
+        "think_walk": (7, c(walk(dict(think, wing="chin", wing2="chin")), "thought", 8)),
+        "work": (8, c([F(dict(work, wing="type")), F(dict(work, wing="type_up")),
+                       F(dict(work, wing="type", head=(0, 1))), F(dict(work, wing="type_up"))])),
+        "attention": (10, c(hop(alert, dict(alert, wing="out"), 6), "bang")),
+        "celebrate": (10, c(hop(party, dict(party, wing="out"), 8), "sparkle")),
+        "waiting": (3, c([F(dict(sit, eyes="happy"))] * 4 + [F(dict(sit, eyes="happy", wing="up")),
+                          F(dict(sit, eyes="happy", wing="out"))] * 2, "check")),
+        "happy": (6, c([F(dict(happy, head=(0, 1))), F(dict(happy, wing="out")), F(dict(happy, head=(1, 0))),
+                        F(dict(happy, wing="up"))], "heart")),
+        "dangle": (6, c([F({"feet": "dangle", "eyes": "wide", "bill": "open", "wing": "out"}),
+                         F({"feet": "dangle", "eyes": "wide", "bill": "open", "wing": "up"})])),
+    }
 
 
 PUPPETS = {"pato": (duck_anims, {"pace_thinking": True, "self_hop": True, "scale_ratio": 1.0})}
