@@ -41,7 +41,7 @@ You send a prompt, Claude Code starts working, and you go do something else. The
 | <img src="docs/states/thinking.gif" width="72"> | **Thinking** (right after your prompt) | Hand on chin, thought cloud above his head 🔵 |
 | <img src="docs/states/working.gif" width="72"> | **Working** (running a tool) | Sits down and types on his tiny laptop 🟡 |
 | <img src="docs/states/attention.gif" width="72"> | **Needs you** (permission request) | Jumps, waves and shows a speech bubble with what Claude wants 🔴 |
-| <img src="docs/states/done.gif" width="72"> | **Done** | Celebrates, then waits with a ✓ until you click him 🟢 |
+| <img src="docs/states/done.gif" width="72"> | **Done** | Celebrates, then waits with a ✓ until you hover or click him 🟢 |
 | <img src="docs/states/sleeping.gif" width="72"> | **Sleeping** | No activity for 3 minutes: zzz |
 | <img src="docs/states/dragged.gif" width="72"> | **Grabbed** | Dangles and swings like a pendulum while you drag him around |
 
@@ -104,6 +104,7 @@ Done. 🎉 Open a new Claude Code session and watch him go.
 | **Click** (when he's asking for you or done) | Focuses the terminal of that session and clears the ✓ |
 | **Click** (any other time) | He gets happy |
 | **Hover** | One-line status: *"Bit está trabalhando (Bash)"* |
+| **Hover for a moment** (when he's done) | Dismisses the "done" bubble and the ✓ |
 | **Hover and wait** | Petting ❤ |
 | **Drag and release** | Pick him up, swing him around, throw him |
 | **Right click** | List of chats (click one to focus it), hide for 30 min / 2 h, quit |

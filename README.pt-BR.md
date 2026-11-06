@@ -41,7 +41,7 @@ Você manda o prompt, o Claude Code começa a trabalhar e você vai fazer outra 
 | <img src="docs/states/thinking.gif" width="72"> | **Pensando** (logo depois do seu prompt) | Mão no queixo, nuvem de pensamento em cima da cabeça 🔵 |
 | <img src="docs/states/working.gif" width="72"> | **Trabalhando** (rodando uma ferramenta) | Senta e digita no notebookzinho 🟡 |
 | <img src="docs/states/attention.gif" width="72"> | **Precisa de você** (pedido de permissão) | Pula, acena e mostra um balão com o que o Claude quer 🔴 |
-| <img src="docs/states/done.gif" width="72"> | **Terminou** | Comemora e fica esperando com um ✓ até você clicar nele 🟢 |
+| <img src="docs/states/done.gif" width="72"> | **Terminou** | Comemora e fica esperando com um ✓ até você passar o mouse ou clicar nele 🟢 |
 | <img src="docs/states/sleeping.gif" width="72"> | **Dormindo** | 3 minutos sem atividade: zzz |
 | <img src="docs/states/dragged.gif" width="72"> | **Agarrado** | Fica pendurado e balança como um pêndulo enquanto você arrasta |
 
@@ -104,6 +104,7 @@ Pronto. 🎉 Abra uma sessão nova do Claude Code e veja ele em ação.
 | **Clique** (quando ele pede algo ou terminou) | Foca o terminal daquela sessão e limpa o ✓ |
 | **Clique** (em qualquer outro momento) | Ele fica feliz |
 | **Passar o mouse** | Status em uma linha: *"Bit está trabalhando (Bash)"* |
+| **Mouse parado em cima por um instante** (quando terminou) | Dispensa o balão de "terminou" e o ✓ |
 | **Deixar o mouse parado em cima** | Carinho ❤ |
 | **Arrastar e soltar** | Pega ele, balança, arremessa |
 | **Botão direito** | Lista de chats (clique pra focar), esconder por 30 min / 2 h, sair |
