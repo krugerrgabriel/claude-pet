@@ -43,38 +43,12 @@ claude_pet/focus.py     (foca o terminal da sessão via wmctrl)
 - Sessão cujo processo `claude` morreu é removida sozinha.
 - Pressionar Esc não dispara `Stop`. Por isso, "pensando" sem eventos por 10 min volta a ocioso, e "ferramenta" sem eventos por 30 min também.
 
-## Personagens
-
-O **pato** usa o [Duck animated sprite](https://pale-tale.itch.io/duck-animated-sprite) da **pale-tale** (CC0).
-O original está em `art/third_party/pale-tale-duck/` e é montado por `python3 tools/import_pale_duck.py`.
-
-Botão direito → **Personagem** troca na hora: Pato, Capivara, Slime ou Robô. A escolha fica salva no `config.json`.
-
-Os personagens PNG saem de uma folha de referência com 8 poses (veja `art/PROMPTS.md`):
-
-```sh
-python3 tools/extract_refs.py art/refs/capivara.png capivara --facing 1   # --facing 1 = desenho olha p/ direita
-```
-
-O extrator recorta cada pose, remove o fundo, a sombra e os efeitos, e reduz para uma grade de pixel real
-(`claude_pet/packs/<nome>/frames.png`). Depois, `tools/rig.py` monta as animações quadro a quadro com receitas
-por personagem: estica e achata sem deformar o rosto, gingado, passo com as pernas de verdade, mão digitando.
-O resultado vai para `anims.png` + `anims.json`, que é o que o pet toca.
-
-```sh
-python3 tools/rig.py                 # remonta as animações de todos
-python3 tools/review_html.py         # art/review.html: todas as poses e animações para revisar
-```
-
-Cada personagem tem um nome (Quack, Capi, Gosminha, Bit), que aparece no balão ao passar o mouse.
-Os nomes podem ser trocados em `names` no `config.json`.
-
 ## Configurar
 
 `~/.config/claude-pet/config.json` (todas as chaves são opcionais; veja `claude_pet/config.py`):
 
 ```json
-{ "skin": "pato", "scale": 3, "body_color": "#5ec4b6", "walk_speed": 45, "climb_chance": 0.25,
+{ "pet_name": "Bit", "scale": 3, "body_color": "#5ec4b6", "walk_speed": 45, "climb_chance": 0.25,
   "sleep_after": 180, "done_linger": 900, "monitor": -1 }
 ```
 

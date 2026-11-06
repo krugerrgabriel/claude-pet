@@ -116,7 +116,7 @@ def build():
 
 TEMPLATE = """<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Claude Pet: revisão de sprites</title>
+<title>Bit: revisão de sprites</title>
 <style>
 :root{--bg:#14171c;--panel:#1d2128;--line:#2c323c;--ink:#e8ebef;--dim:#8b94a3;--acc:#5ec4b6;
  --check-a:#232831;--check-b:#1b1f26}

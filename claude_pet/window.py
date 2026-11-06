@@ -113,7 +113,7 @@ class PetWindow(Gtk.Window):
         super().__init__(type=Gtk.WindowType.POPUP)
         self.cfg = cfg
         self.store = store
-        self.skin = skins.load(cfg.skin)
+        self.skin = skins.load()
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         _transparent(self)
         self.set_default_size(self.size, self.size)
@@ -222,7 +222,7 @@ class PetWindow(Gtk.Window):
         cr.translate(half, half)
         cr.rotate(math.radians(f.rotation))
         cr.translate(-half, -half)
-        look = f.look if self.skin.name == skins.ROBOT else f.facing
+        look = f.look
         self.skin.draw(cr, f.anim, f.frame, look, f.status, self.skin.pixel_scale(self.cfg.scale),
                        self.cfg.body_color, f.lean)
         return True
@@ -256,21 +256,19 @@ class PetWindow(Gtk.Window):
             return f"Claude Code terminou{extra}.\nClique em mim para abrir"
         if not hovering or self.pressed:
             return ""
-        name = self.cfg.names.get(self.skin.name, self.skin.name.capitalize())
-
-        def detail(sess):
-            text = STATUS_LABEL.get(sess.status, sess.status)
-            return f"{text} ({sess.tool})" if sess.status == "working" and sess.tool else text
-
+        name = self.cfg.pet_name
         if not self.sessions:
-            return f"Oi, eu sou o {name}!\nNenhuma sessão aberta"
+            return f"{name}: nenhuma sessão aberta"
         if len(self.sessions) == 1:
-            return f"{name} está {detail(self.sessions[0])}"
-        lines = [f"{name}, de olho em {len(self.sessions)} sessões"]
-        for sess in self.sessions[:5]:
-            short = sess.name if len(sess.name) <= 22 else sess.name[:21] + "…"
-            lines.append(f"{short}: {detail(sess)}")
-        return "\n".join(lines)
+            sess = self.sessions[0]
+            detail = STATUS_LABEL.get(sess.status, sess.status)
+            if sess.status == "working" and sess.tool:
+                detail = f"{detail} ({sess.tool})"
+            return f"{name} está {detail}"
+        counts: dict[str, int] = {}
+        for sess in self.sessions:  # já vêm do mais urgente pro menos
+            counts[sess.status] = counts.get(sess.status, 0) + 1
+        return f"{name}: " + ", ".join(f"{n} {STATUS_LABEL.get(st, st)}" for st, n in counts.items())
 
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
@@ -313,7 +311,7 @@ class PetWindow(Gtk.Window):
         menu = Gtk.Menu()
         if self.sessions:
             for s in self.sessions[:8]:
-                item = Gtk.MenuItem(label=f"{s.name}: {STATUS_LABEL.get(s.status, s.status)}")
+                item = Gtk.MenuItem(label=f"{s.project}: {STATUS_LABEL.get(s.status, s.status)}")
                 item.connect("activate", lambda _i, sess=s: (focus.focus_session(sess.claude_pid, sess.project),
                                                               self.store.acknowledge(sess)))
                 menu.append(item)
@@ -322,17 +320,6 @@ class PetWindow(Gtk.Window):
             item.set_sensitive(False)
             menu.append(item)
         menu.append(Gtk.SeparatorMenuItem())
-        skin_item = Gtk.MenuItem(label="Personagem")
-        sub = Gtk.Menu()
-        group = None
-        for name in skins.available():
-            radio = Gtk.RadioMenuItem.new_with_label_from_widget(group, name.capitalize())
-            group = group or radio
-            radio.set_active(name == self.skin.name)
-            radio.connect("toggled", lambda r, n=name: r.get_active() and self._set_skin(n))
-            sub.append(radio)
-        skin_item.set_submenu(sub)
-        menu.append(skin_item)
         for label, minutes in (("Esconder por 30 min", 30), ("Esconder por 2 h", 120)):
             item = Gtk.MenuItem(label=label)
             item.connect("activate", lambda _i, m=minutes: self._hide_for(m))
@@ -342,17 +329,6 @@ class PetWindow(Gtk.Window):
         menu.append(quit_item)
         menu.show_all()
         menu.popup_at_pointer(ev)
-
-    def _set_skin(self, name: str) -> None:
-        if name == self.skin.name:
-            return
-        self.skin = skins.load(name)
-        self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
-        self.resize(self.size, self.size)
-        self.pet.set_skin(self.skin)
-        self._shape_rot = None
-        self.frame = None
-        self.cfg.save_key("skin", name)
 
     def _hide_for(self, minutes: int) -> None:
         self.hidden_until = time.monotonic() + minutes * 60

@@ -127,19 +127,7 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class TitleAndSkinTest(unittest.TestCase):
-    def test_title_prefers_latest_and_custom(self):
-        from claude_pet.state import read_title
-        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
-            f.write('{"type":"ai-title","aiTitle":"Velho"}\n{"type":"user","x":1}\n'
-                    '{"type":"ai-title","aiTitle":"Mascote \\"novo\\""}\n')
-        self.assertEqual(read_title(f.name), 'Mascote "novo"')
-        with open(f.name, "a") as fh:
-            fh.write('{"type":"custom-title","customTitle":"Meu nome"}\n')
-        self.assertEqual(read_title(f.name), "Meu nome")
-        self.assertEqual(read_title("/nao/existe.jsonl"), "")
-        os.unlink(f.name)
-
+class SkinTest(unittest.TestCase):
     def test_every_skin_has_every_animation(self):
         from claude_pet import skins
         from claude_pet.sprites import ANIMATIONS
@@ -161,7 +149,7 @@ class SwingTest(unittest.TestCase):
         orig = C.time.monotonic
         C.time.monotonic = lambda: t[0]
         try:
-            pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skins.load("pato"))
+            pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skins.load())
             pet.press(500, 500)
             for k in range(20):
                 t[0] += 1 / 30
