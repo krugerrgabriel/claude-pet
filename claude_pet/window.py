@@ -15,7 +15,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
-from . import focus, skins  # noqa: E402
+from . import bubble, focus, skins  # noqa: E402
 from .character import Frame, Pet, Rect  # noqa: E402
 from .config import Config  # noqa: E402
 from .sprites import STATUS_COLORS  # noqa: E402
@@ -61,39 +61,38 @@ def _transparent(win: Gtk.Window) -> None:
 
 
 class Bubble(Gtk.Window):
-    """Balão de texto; não recebe cliques."""
-
-    PAD = 8
+    """Balão de fala pixel art; não recebe cliques."""
 
     def __init__(self):
         super().__init__(type=Gtk.WindowType.POPUP)
         _transparent(self)
-        self.text = ""
-        self.accent = STATUS_COLORS["idle"]
+        self.key = None
+        self.layout = None
+        self.tail_x = 0
+        self.tail_down = True
         self.connect("draw", self._draw)
         self.connect("realize", lambda w: w.input_shape_combine_region(cairo.Region()))
-        self._layout = None
 
-    def show_text(self, text: str, accent: str, anchor_x: int, anchor_y: int, area: Rect) -> None:
+    def show_text(self, text: str, status: str, anchor_x: int, anchor_y: int, area: Rect) -> None:
         if not text:
             self.hide()
+            self.key = None
             return
-        if text != self.text or self._layout is None:
-            self.text, self.accent = text, accent
-            self._layout = self.create_pango_layout("")
-            self._layout.set_font_description(Pango.FontDescription("Sans 9"))
-            self._layout.set_text(text, -1)
-            self._layout.set_width(360 * Pango.SCALE)
-            self._layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-            tw, th = self._layout.get_pixel_size()
-            self.resize(tw + 2 * self.PAD + 6, th + 2 * self.PAD)
+        if (text, status) != self.key:
+            self.key = (text, status)
+            self.layout = bubble.make_layout(self, text, status)
+            self.resize(*bubble.size_for(self.layout))
             self.queue_draw()
-        self.accent = accent
-        w, h = self.get_size()
+        w, h = bubble.size_for(self.layout)
         x = min(max(anchor_x - w // 2, area.x), area.x + area.w - w)
-        y = anchor_y - h - 4
-        if y < area.y:
+        y = anchor_y - h
+        tail_down = y >= area.y
+        if not tail_down:
             y = anchor_y + 4
+        tail_x = anchor_x - x
+        if (tail_x, tail_down) != (self.tail_x, self.tail_down):
+            self.tail_x, self.tail_down = tail_x, tail_down
+            self.queue_draw()
         self.move(int(x), int(y))
         if not self.get_visible():
             self.show()
@@ -103,25 +102,9 @@ class Bubble(Gtk.Window):
         cr.set_source_rgba(0, 0, 0, 0)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
-        w, h = self.get_size()
-        r = 8
-        cr.new_sub_path()
-        cr.arc(w - r - 1, r + 1, r, -math.pi / 2, 0)
-        cr.arc(w - r - 1, h - r - 1, r, 0, math.pi / 2)
-        cr.arc(r + 1, h - r - 1, r, math.pi / 2, math.pi)
-        cr.arc(r + 1, r + 1, r, math.pi, 1.5 * math.pi)
-        cr.close_path()
-        cr.set_source_rgba(0.09, 0.12, 0.16, 0.93)
-        cr.fill_preserve()
-        rr, gg, bb = (int(self.accent[i:i + 2], 16) / 255 for i in (1, 3, 5))
-        cr.set_source_rgb(rr, gg, bb)
-        cr.set_line_width(1.5)
-        cr.stroke()
-        cr.rectangle(1, 4, 4, h - 8)
-        cr.fill()
-        cr.set_source_rgb(0.92, 0.95, 0.97)
-        cr.move_to(self.PAD + 4, self.PAD)
-        PangoCairo.show_layout(cr, self._layout)
+        if self.layout is not None:
+            w, h = self.get_size()
+            bubble.draw(cr, self.layout, w, h, self.tail_x, self.tail_down)
         return True
 
 
@@ -265,9 +248,9 @@ class PetWindow(Gtk.Window):
 
         if top and top.status == "attention":
             msg = _traduz(top.message)
-            return f"⚠ {msg or 'Claude Code precisa de você'}. Clique em mim para abrir{extra}"
+            return f"{msg or 'Claude Code precisa de você'}{extra}.\nClique em mim para abrir"
         if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
-            return f"✓ Claude Code terminou. Clique em mim para abrir{extra}"
+            return f"Claude Code terminou{extra}.\nClique em mim para abrir"
         if not hovering or self.pressed:
             return ""
         if not self.sessions:
@@ -283,7 +266,8 @@ class PetWindow(Gtk.Window):
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
         s = self.skin.pixel_scale(self.cfg.scale)
-        self.bubble.show_text(text, STATUS_COLORS.get(frame.status, STATUS_COLORS["idle"]),
+        status = self.top.status if (self.top and text) else "idle"
+        self.bubble.show_text(text, status if status in ("done", "attention") else "idle",
                               frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
 
     # ------------------------------------------------------------ mouse
