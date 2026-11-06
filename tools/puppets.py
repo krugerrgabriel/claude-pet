@@ -319,7 +319,12 @@ def duck_anims():
     }
 
 
-PUPPETS = {"pato": (duck_anims, {"pace_thinking": True, "self_hop": True, "scale_ratio": 1.0})}
+def _pixel_duck():
+    import duck_pixel
+    return duck_pixel.anims()
+
+
+PUPPETS = {"pato": (_pixel_duck, {"pace_thinking": True, "self_hop": True, "scale_ratio": 1.0})}
 
 if __name__ == "__main__":
     for n in sys.argv[1:] or PUPPETS:
