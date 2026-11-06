@@ -76,6 +76,8 @@ def draw_overlay(cr, scale, overlay, f, bbox, canvas):
             step = (f + k) % 4
             if step < 3:
                 _glyph(cr, scale, "z", clamp(r - 2 + k * 3, 3), max(0, by - 3 - step * 2 - k), "#c9d6df")
+    elif overlay == "thought":
+        draw_thought(cr, scale, f, bbox, canvas)
     elif overlay == "dots":
         for k in range(f % 4):
             _glyph(cr, scale, "dot", clamp(r - 1 + k * 3, 2), max(0, by - 1 - k), "#e0f7fa")
@@ -95,6 +97,44 @@ def draw_overlay(cr, scale, overlay, f, bbox, canvas):
                 _glyph(cr, scale, "spark", clamp(x, 3), max(0, y), "#ffe66d")
 
 
+THOUGHT_CLOUD = [
+    "..OOO.OOO...",
+    ".OWWWOWWWOO.",
+    "OWWWWWWWWWWO",
+    "OWWWWWWWWWGO",
+    ".OGWWWWWWGO.",
+    "..OOOOOOOO..",
+]
+THOUGHT_COLORS = {"O": "#5d6b7e", "W": "#ffffff", "G": "#d5dce6", "d": "#5d6b7e"}
+
+
+def draw_thought(cr, scale, f, bbox, canvas):
+    """Nuvem de pensamento: bolinhas subindo da cabeça + nuvem com os ... aparecendo."""
+    bx, by, bw, bh = bbox
+    cw, ch = len(THOUGHT_CLOUD[0]), len(THOUGHT_CLOUD)
+    x = max(0, min(canvas - cw, bx + bw - 4))
+    y = max(0, by - ch - 2)
+
+    def px(xx, yy, color):
+        cr.set_source_rgb(*sprites.hex_rgb(color))
+        cr.rectangle(xx * scale, yy * scale, scale, scale)
+        cr.fill()
+
+    # bolinhas: aparecem uma de cada vez, de baixo pra cima
+    step = f % 4
+    if step >= 0:
+        px(x - 1, y + ch + 2, THOUGHT_COLORS["W"])
+    if step >= 1:
+        for dx, dy in ((0, 0), (1, 0), (0, 1), (1, 1)):
+            px(x + dx, y + ch + dy - 1, THOUGHT_COLORS["W"])
+    for j, row in enumerate(THOUGHT_CLOUD):
+        for i, c in enumerate(row):
+            if c != ".":
+                px(x + i, y + j, THOUGHT_COLORS[c])
+    for k in range(min(3, step + 1) if step < 3 else 3):
+        px(x + 3 + k * 3, y + 3, THOUGHT_COLORS["d"])
+
+
 class PackSkin:
     """Personagem PNG com animações já montadas por tools/rig.py (anims.png + anims.json)."""
 
@@ -106,22 +146,24 @@ class PackSkin:
         self.anims = meta["anims"]
         self.pace_thinking = bool(meta.get("pace_thinking", True))
         self.self_hop = bool(meta.get("self_hop", True))
+        self.scale_ratio = float(meta.get("scale_ratio", 2 / 3))
         self.sheet = cairo.ImageSurface.create_from_png(str(folder / "anims.png"))
-        # pack.json/frames.png = poses originais (usadas só na página de revisão)
-        base = json.loads((folder / "pack.json").read_text())
-        self.frames = base["frames"]
-        self.base_canvas = int(base["canvas"])
-        self.base_sheet = cairo.ImageSurface.create_from_png(str(folder / "frames.png"))
+        # pack.json/frames.png = poses extraídas de referência (só existem nos pacotes antigos)
+        self.frames = {}
+        if (folder / "pack.json").exists():
+            base = json.loads((folder / "pack.json").read_text())
+            self.frames = base["frames"]
+            self.base_canvas = int(base["canvas"])
+            self.base_sheet = cairo.ImageSurface.create_from_png(str(folder / "frames.png"))
         boxes = [e["bbox"] for a in self.anims.values() for e in a["frames"]]
         x0 = min(b[0] for b in boxes)
         y0 = min(b[1] for b in boxes)
         x1 = max(b[0] + b[2] for b in boxes)
         self.hit = (x0, y0, x1 - x0, self.canvas - y0)
 
-    @staticmethod
-    def pixel_scale(scale: int) -> int:
-        """Os desenhos PNG têm ~1,5x mais pixels que o robô; escala menor deixa do mesmo tamanho."""
-        return max(1, round(scale * 2 / 3))
+    def pixel_scale(self, scale: int) -> int:
+        """Desenhos com mais pixels que o robô usam escala menor, para ficar do mesmo tamanho."""
+        return max(1, round(scale * self.scale_ratio))
 
     def anim_info(self, anim: str) -> tuple[float, int]:
         a = self.anims[anim]

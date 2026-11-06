@@ -45,7 +45,7 @@ def png_b64(surf) -> str:
 
 
 def render_frame(skin, anim, i, look=1):
-    ps = SCALE if skin.name == skins.ROBOT else max(1, round(SCALE * 2 / 3))
+    ps = skin.pixel_scale(SCALE)
     n = skin.canvas * ps
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)
     skin.draw(cairo.Context(surf), anim, i, look, ANIM_INFO[anim][2], ps, "#5ec4b6")
@@ -82,7 +82,7 @@ def build():
             html.append(f'<details class="ref"><summary>Referência original (ChatGPT)</summary>'
                         f'<img src="refs/{name}.png" alt="referência {name}"></details>')
 
-        if hasattr(skin, "frames"):
+        if getattr(skin, "frames", None):
             html.append('<h2>Poses <span>desenhos de base extraídos da referência; as animações '
                         'são montadas a partir deles</span></h2><div class="poses">')
             for pose in skin.frames:

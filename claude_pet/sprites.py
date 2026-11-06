@@ -194,6 +194,21 @@ def render(cr, pose: dict, scale: int, body_color: str) -> None:
     _overlay(px, pose.get("overlay"), pose.get("oframe", 0))
 
 
+def _thought_robot(px, f):
+    from .skins import THOUGHT_CLOUD, THOUGHT_COLORS
+    x, y = 17, 0
+    step = f % 4
+    px(x - 1, y + 8, 1, 1, THOUGHT_COLORS["W"], ox=0, oy=0)
+    if step >= 1:
+        px(x, y + 6, 2, 2, THOUGHT_COLORS["W"], ox=0, oy=0)
+    for j, row in enumerate(THOUGHT_CLOUD):
+        for i, c in enumerate(row):
+            if c != ".":
+                px(x + i, y + j, 1, 1, THOUGHT_COLORS[c], ox=0, oy=0)
+    for k in range(min(3, step + 1)):
+        px(x + 3 + k * 3, y + 3, 1, 1, THOUGHT_COLORS["d"], ox=0, oy=0)
+
+
 def _glyph(px, name, x, y, color):
     for j, row in enumerate(GLYPHS[name]):
         for i, ch in enumerate(row):
@@ -204,6 +219,8 @@ def _glyph(px, name, x, y, color):
 def _overlay(px, overlay, f):
     if not overlay:
         return
+    if overlay == "thought":
+        return _thought_robot(px, f)
     if overlay == "zzz":
         for k in range(3):
             step = (f + k) % 4
@@ -239,9 +256,9 @@ ANIMATIONS: dict[str, tuple[float, list[dict]]] = {
     "sit": (5, _blinking({"legs": "sit", "arms": "down"})),
     "sleep": (2, [{"legs": "sit", "arms": "down", "eyes": "closed", "overlay": "zzz", "oframe": i,
                    "bob": i % 2} for i in range(4)]),
-    "think": (3, [{"legs": "stand", "arms": "chin", "gaze": "up", "look": lk, "overlay": "dots", "oframe": i}
+    "think": (3, [{"legs": "stand", "arms": "chin", "gaze": "up", "look": lk, "overlay": "thought", "oframe": i}
                   for i, lk in enumerate((0, 1, 1, 0, -1, -1, 0, 0))]),
-    "think_walk": (6, [{"legs": l, "arms": "chin", "gaze": "up", "overlay": "dots", "oframe": i // 2}
+    "think_walk": (6, [{"legs": l, "arms": "chin", "gaze": "up", "overlay": "thought", "oframe": i // 2}
                        for i, l in enumerate(("walk1", "stand", "walk2", "stand") * 2)]),
     "work": (6, [{"legs": "sit", "arms": a, "gaze": "down", "prop": "laptop", "eyes": e}
                  for a, e in (("type1", "open"), ("type2", "open")) * 6 + (("type1", "closed"),)]),

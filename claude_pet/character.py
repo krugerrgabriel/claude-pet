@@ -136,6 +136,7 @@ class Pet:
         self.mode = "drag"
         self.drag_offset = (px - x, py - y)
         self.drag_trail = [(time.monotonic(), px, py)]
+        self.press_point = (px, py)
         self.x, self.y = x, y
 
     def motion(self, px: float, py: float) -> None:
@@ -145,14 +146,25 @@ class Pet:
         now = time.monotonic()
         self.drag_trail = [p for p in self.drag_trail if now - p[0] < 0.12] + [(now, px, py)]
 
+    def _recent_trail(self, window: float = 0.1):
+        """Pontos do arraste nos últimos `window` s. Mouse parado = só o último ponto (velocidade 0)."""
+        now = time.monotonic()
+        recent = [p for p in self.drag_trail if now - p[0] <= window]
+        return recent or self.drag_trail[-1:]
+
     def release(self) -> bool:
         """Solta. Retorna True se foi um clique (quase não mexeu)."""
         if self.mode != "drag":
             return False
+        moved_total = math.hypot(self.drag_trail[-1][1] - self.press_point[0],
+                                 self.drag_trail[-1][2] - self.press_point[1])
+        self.drag_trail = self._recent_trail()
         t0, x0, y0 = self.drag_trail[0]
         t1, x1, y1 = self.drag_trail[-1]
-        moved = math.hypot(x1 - x0, y1 - y0)
+        moved = moved_total
         dt = max(t1 - t0, 1e-3)
+        if len(self.drag_trail) < 2:
+            x1, y1 = x0, y0  # mouse estava parado: solta sem arremessar
         self.mode = "free"
         self.vx = max(-1500.0, min(1500.0, (x1 - x0) / dt))
         self.vy = max(-1500.0, min(1500.0, (y1 - y0) / dt))
@@ -210,9 +222,10 @@ class Pet:
     def _swing(self, dt: float) -> None:
         """Pêndulo: arrastando pra direita, o corpo fica pra trás (inclina pra esquerda) e balança."""
         target = 0.0
-        if self.mode == "drag" and len(self.drag_trail) >= 2:
-            t0, x0, _ = self.drag_trail[0]
-            t1, x1, _ = self.drag_trail[-1]
+        trail = self._recent_trail() if self.mode == "drag" else []
+        if len(trail) >= 2:
+            t0, x0, _ = trail[0]
+            t1, x1, _ = trail[-1]
             if t1 - t0 > 1e-3:
                 target = max(-0.45, min(0.45, -(x1 - x0) / (t1 - t0) / 1400))
         acc = 70 * (target - self.lean) - 6 * self.lean_v

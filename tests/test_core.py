@@ -175,3 +175,26 @@ class SwingTest(unittest.TestCase):
             self.assertLess(abs(f.lean), 0.05)    # e voltou a ficar reto
         finally:
             C.time.monotonic = orig
+
+
+class DragStopTest(unittest.TestCase):
+    def test_stop_then_release_does_not_throw_or_lean(self):
+        import claude_pet.character as C
+        t = [0.0]
+        orig = C.time.monotonic
+        C.time.monotonic = lambda: t[0]
+        try:
+            pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+            pet.press(500, 500)
+            for k in range(10):                      # puxa rápido
+                t[0] += 1 / 60
+                pet.motion(500 + 60 * k, 500)
+                pet.tick(1 / 60, "idle", None)
+            for _ in range(60):                      # para, segurando, sem eventos de movimento
+                t[0] += 1 / 30
+                f = pet.tick(1 / 30, "idle", None)
+            self.assertLess(abs(f.lean), 0.05)
+            self.assertFalse(pet.release())          # foi arraste, não clique
+            self.assertEqual((pet.vx, pet.vy), (0.0, 0.0))
+        finally:
+            C.time.monotonic = orig
