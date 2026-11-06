@@ -13,12 +13,13 @@ from pathlib import Path
 CACHE_DIR = Path(os.environ.get("CLAUDE_PET_HOME", Path.home() / ".cache" / "claude-pet"))
 SESSIONS_DIR = CACHE_DIR / "sessions"
 LOCK_FILE = CACHE_DIR / "pet.lock"
-CONFIG_FILE = Path.home() / ".config" / "claude-pet" / "config.json"
+CONFIG_FILE = Path(os.environ.get("CLAUDE_PET_CONFIG", Path.home() / ".config" / "claude-pet" / "config.json"))
 
 
 @dataclass
 class Config:
     # Visual
+    skin: str = "pato"             # pato, capivara, slime, robo (ou qualquer pasta em claude_pet/packs/)
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"
@@ -41,6 +42,17 @@ class Config:
     hover_pet_time: float = 1.2       # cursor parado em cima → carinho
 
     extra: dict = field(default_factory=dict)
+
+    def save_key(self, key: str, value) -> None:
+        """Grava uma chave no config.json preservando as outras."""
+        setattr(self, key, value)
+        try:
+            data = json.loads(CONFIG_FILE.read_text())
+        except (OSError, ValueError):
+            data = {}
+        data[key] = value
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
     @classmethod
     def load(cls) -> "Config":

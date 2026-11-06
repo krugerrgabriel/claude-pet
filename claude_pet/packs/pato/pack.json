@@ -1,0 +1,79 @@
+{
+ "name": "pato",
+ "canvas": 48,
+ "facing": 0,
+ "frames": {
+  "idle": {
+   "index": 0,
+   "bbox": [
+    9,
+    10,
+    30,
+    38
+   ]
+  },
+  "sit": {
+   "index": 1,
+   "bbox": [
+    9,
+    12,
+    30,
+    36
+   ]
+  },
+  "sleep": {
+   "index": 2,
+   "bbox": [
+    8,
+    14,
+    31,
+    34
+   ]
+  },
+  "thinking": {
+   "index": 3,
+   "bbox": [
+    10,
+    12,
+    27,
+    36
+   ]
+  },
+  "working": {
+   "index": 4,
+   "bbox": [
+    6,
+    16,
+    36,
+    32
+   ]
+  },
+  "alert": {
+   "index": 5,
+   "bbox": [
+    6,
+    12,
+    36,
+    36
+   ]
+  },
+  "done": {
+   "index": 6,
+   "bbox": [
+    7,
+    12,
+    34,
+    36
+   ]
+  },
+  "grabbed": {
+   "index": 7,
+   "bbox": [
+    11,
+    14,
+    25,
+    34
+   ]
+  }
+ }
+}

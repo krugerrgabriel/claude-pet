@@ -33,7 +33,7 @@ Para desinstalar: `python3 ~/claude-pet/install.py --uninstall`. O instalador fa
 Claude Code ──hook (stdin JSON)──▶ hooks/claude_pet_hook.py ──▶ ~/.cache/claude-pet/sessions/<id>.json
                                                                         │ (lido a cada 250 ms)
 claude_pet/state.py  (resume sessões, timeouts, prioridade) ◀───────────┘
-claude_pet/character.py (movimento, física, máquina de estados — sem GTK, testável)
+claude_pet/character.py (movimento, física, máquina de estados, sem GTK, testável)
 claude_pet/sprites.py   (robô em pixel art montado por partes + animações)
 claude_pet/window.py    (janela GTK3 transparente, clique atravessa, balão, menu)
 claude_pet/focus.py     (foca o terminal da sessão via wmctrl)
@@ -43,12 +43,26 @@ claude_pet/focus.py     (foca o terminal da sessão via wmctrl)
 - Sessão cujo processo `claude` morreu é removida sozinha.
 - Pressionar Esc não dispara `Stop`. Por isso, "pensando" sem eventos por 10 min volta a ocioso, e "ferramenta" sem eventos por 30 min também.
 
+## Personagens
+
+Botão direito → **Personagem** troca na hora: Pato, Capivara, Slime ou Robô. A escolha fica salva no `config.json`.
+
+Os personagens PNG saem de uma folha de referência com 8 poses (veja `art/PROMPTS.md`):
+
+```sh
+python3 tools/extract_refs.py art/refs/capivara.png capivara --facing 1   # --facing 1 = desenho olha p/ direita
+```
+
+O extrator recorta cada pose, remove o fundo, a sombra e os efeitos, reduz para uma grade de pixel real e salva
+`claude_pet/packs/<nome>/frames.png` + `pack.json`. O movimento (pulinho, estica e achata, espelhar)
+e os balões (zzz, …, !, brilhos, ✓) são feitos pelo código, iguais para todos os personagens.
+
 ## Configurar
 
 `~/.config/claude-pet/config.json` (todas as chaves são opcionais; veja `claude_pet/config.py`):
 
 ```json
-{ "scale": 3, "body_color": "#5ec4b6", "walk_speed": 45, "climb_chance": 0.25,
+{ "skin": "pato", "scale": 3, "body_color": "#5ec4b6", "walk_speed": 45, "climb_chance": 0.25,
   "sleep_after": 180, "done_linger": 900, "monitor": -1 }
 ```
 

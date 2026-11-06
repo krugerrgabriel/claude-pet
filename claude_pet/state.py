@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,10 +27,41 @@ class Session:
     claude_pid: int
     ts: float
     since: float
+    title: str = ""
 
     @property
     def project(self) -> str:
         return os.path.basename(self.cwd.rstrip("/")) or "~"
+
+    @property
+    def name(self) -> str:
+        """Nome da aba do Claude Code (título da sessão); sem título, o nome da pasta."""
+        name = self.title or self.project
+        return name if len(name) <= 40 else name[:39] + "…"
+
+
+_TITLE_RE = re.compile(rb'"(customTitle|aiTitle)":\s*"((?:[^"\\]|\\.)*)"')
+
+
+def read_title(path: str, tail_bytes: int = 512 * 1024, max_bytes: int = 64 * 1024 * 1024) -> str:
+    """Último título gravado no transcript (.jsonl). Título manual vence o gerado pela IA."""
+    try:
+        with open(path, "rb") as fh:
+            size = fh.seek(0, os.SEEK_END)
+            for chunk in (tail_bytes, max_bytes):
+                fh.seek(max(0, size - chunk))
+                found = {k: v for k, v in _TITLE_RE.findall(fh.read(chunk))}
+                if found or chunk >= size:
+                    break
+    except OSError:
+        return ""
+    raw = found.get(b"customTitle") or found.get(b"aiTitle")
+    if not raw:
+        return ""
+    try:
+        return json.loads(b'"' + raw + b'"')
+    except ValueError:
+        return ""
 
 
 def _pid_alive(pid: int) -> bool:
@@ -45,6 +77,7 @@ class StateStore:
         self.dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, tuple[float, dict]] = {}
         self._acked: dict[str, float] = {}  # session_id → ts do evento "done" já visto
+        self._titles: dict[str, tuple[float, str]] = {}  # session_id → (lido em, título)
 
     # ---------- leitura ----------
     def _read_raw(self) -> list[dict]:
@@ -107,9 +140,19 @@ class StateStore:
                 claude_pid=pid,
                 ts=float(d.get("ts", 0)),
                 since=float(d.get("since") or d.get("ts", 0)),
+                title=self._title(d, now),
             ))
         result.sort(key=lambda s: (PRIORITY.get(s.status, 0), s.ts), reverse=True)
         return result
+
+    def _title(self, d: dict, now: float) -> str:
+        sid, path = d.get("session_id", ""), d.get("transcript_path", "")
+        cached = self._titles.get(sid)
+        if cached and now - cached[0] < 30:
+            return cached[1]
+        title = read_title(path) if path else ""
+        self._titles[sid] = (now, title)
+        return title
 
     def top(self) -> Session | None:
         sessions = self.sessions()

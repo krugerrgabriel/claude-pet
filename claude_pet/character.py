@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from typing import Callable
 
 from .config import Config
-from .sprites import ANIMATIONS, CANVAS
 
 GRAVITY = 2200.0
 
@@ -40,13 +39,16 @@ class Frame:
     frame: int
     look: int            # -1/0/1, para onde os olhos apontam
     status: str          # status visual (cor da antena)
+    facing: int = 1      # lado para onde o corpo está virado (skins PNG espelham)
 
 
 class Pet:
     def __init__(self, cfg: Config, area: Rect, area_at: Callable[[float, float], Rect] | None = None,
-                 rng: random.Random | None = None):
+                 rng: random.Random | None = None, skin=None):
+        from .skins import RobotSkin
         self.cfg = cfg
-        self.size = CANVAS * cfg.scale
+        self.skin = skin or RobotSkin()
+        self.size = self.skin.canvas * cfg.scale
         self.area = area
         self.area_at = area_at or (lambda x, y: self.area)
         self.rng = rng or random.Random()
@@ -190,13 +192,23 @@ class Pet:
 
         if anim != self.anim:
             self.anim, self.anim_started = anim, now
-        fps, frames = ANIMATIONS[self.anim]
-        frame = int((now - self.anim_started) * fps) % len(frames)
+        fps, count = self.skin.anim_info(self.anim)
+        frame = int((now - self.anim_started) * fps) % count
 
         x, y = self.position()
         rot = self.edge_pos(self.s)[2] if self.mode == "edge" else 0
         visual = "sleep" if self.anim == "sleep" else self.status
-        return Frame(int(x), int(y - self.jump), rot, self.anim, frame, look, visual)
+        if look:
+            self.direction = look
+        return Frame(int(x), int(y - self.jump), rot, self.anim, frame, look, visual, self.direction)
+
+    def set_skin(self, skin) -> None:
+        """Troca de personagem: o tamanho muda, então ele solta e cai de novo no chão."""
+        x, y = self.position()
+        self.skin = skin
+        self.size = skin.canvas * self.cfg.scale
+        self.mode, self.x, self.y = "free", x, min(y, self.floor_y)
+        self.vx = self.vy = 0.0
 
     def _update_status(self, status: str, now: float) -> None:
         if status != self.status:

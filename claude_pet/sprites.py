@@ -9,7 +9,7 @@ from __future__ import annotations
 import colorsys
 
 CANVAS = 30
-OX, OY = 5, 7  # deslocamento do sprite (20x23) dentro do canvas — pés em y=29
+OX, OY = 5, 7  # deslocamento do sprite (20x23) dentro do canvas: pés em y=29
 
 STATUS_COLORS = {
     "idle": "#6fcf97",

@@ -1,0 +1,79 @@
+{
+ "name": "capivara",
+ "canvas": 54,
+ "facing": 1,
+ "frames": {
+  "idle": {
+   "index": 0,
+   "bbox": [
+    10,
+    24,
+    33,
+    30
+   ]
+  },
+  "sit": {
+   "index": 1,
+   "bbox": [
+    11,
+    22,
+    31,
+    32
+   ]
+  },
+  "sleep": {
+   "index": 2,
+   "bbox": [
+    6,
+    31,
+    41,
+    23
+   ]
+  },
+  "thinking": {
+   "index": 3,
+   "bbox": [
+    12,
+    23,
+    29,
+    31
+   ]
+  },
+  "working": {
+   "index": 4,
+   "bbox": [
+    5,
+    29,
+    44,
+    25
+   ]
+  },
+  "alert": {
+   "index": 5,
+   "bbox": [
+    14,
+    12,
+    26,
+    42
+   ]
+  },
+  "done": {
+   "index": 6,
+   "bbox": [
+    7,
+    19,
+    40,
+    35
+   ]
+  },
+  "grabbed": {
+   "index": 7,
+   "bbox": [
+    14,
+    17,
+    25,
+    37
+   ]
+  }
+ }
+}

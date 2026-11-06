@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import sys
 import time
 
@@ -14,10 +15,10 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
-from . import focus  # noqa: E402
+from . import focus, skins  # noqa: E402
 from .character import Frame, Pet, Rect  # noqa: E402
 from .config import Config  # noqa: E402
-from .sprites import ANIMATIONS, CANVAS, OX, OY, STATUS_COLORS, render  # noqa: E402
+from .sprites import STATUS_COLORS  # noqa: E402
 from .state import Session, StateStore  # noqa: E402
 
 DEBUG = bool(os.environ.get("CLAUDE_PET_DEBUG"))
@@ -29,6 +30,21 @@ STATUS_LABEL = {
     "attention": "precisa de você",
     "done": "terminou",
 }
+
+
+_PERMISSAO = re.compile(r"Claude needs your permission to use (.+)", re.I)
+
+
+def _traduz(msg: str) -> str:
+    """Mensagens do Claude Code vêm em inglês; traduz as comuns."""
+    if not msg:
+        return ""
+    m = _PERMISSAO.search(msg)
+    if m:
+        return f"Quer permissão para usar {m.group(1)}"
+    if "waiting for your input" in msg.lower():
+        return "Esperando sua resposta"
+    return msg
 
 
 def _transparent(win: Gtk.Window) -> None:
@@ -114,13 +130,14 @@ class PetWindow(Gtk.Window):
         super().__init__(type=Gtk.WindowType.POPUP)
         self.cfg = cfg
         self.store = store
-        self.size = CANVAS * cfg.scale
+        self.skin = skins.load(cfg.skin)
+        self.size = self.skin.canvas * cfg.scale
         _transparent(self)
         self.set_default_size(self.size, self.size)
         self.resize(self.size, self.size)
 
         self.display = Gdk.Display.get_default()
-        self.pet = Pet(cfg, self._primary_area(), self._area_at)
+        self.pet = Pet(cfg, self._primary_area(), self._area_at, skin=self.skin)
         self.bubble = Bubble()
 
         self.frame: Frame | None = None
@@ -216,17 +233,12 @@ class PetWindow(Gtk.Window):
         f = self.frame
         if f is None:
             return True
-        _fps, frames = ANIMATIONS[f.anim]
-        pose = dict(frames[f.frame % len(frames)])
-        pose.setdefault("look", f.look)
-        pose["antenna"] = STATUS_COLORS.get(f.status, STATUS_COLORS["idle"])
-        if f.status == "attention" and int(time.monotonic() * 4) % 2:
-            pose["antenna"] = "#ffffff"
         half = self.size / 2
         cr.translate(half, half)
         cr.rotate(math.radians(f.rotation))
         cr.translate(-half, -half)
-        render(cr, pose, self.cfg.scale, self.cfg.body_color)
+        look = f.look if self.skin.name == skins.ROBOT else f.facing
+        self.skin.draw(cr, f.anim, f.frame, look, f.status, self.cfg.scale, self.cfg.body_color)
         return True
 
     def _update_input_shape(self, rotation: int) -> None:
@@ -235,7 +247,8 @@ class PetWindow(Gtk.Window):
         if not gdk_win:
             return
         s = self.cfg.scale
-        x, y, w, h = OX * s, OY * s, 20 * s, (CANVAS - OY) * s
+        hx, hy, hw, hh = self.skin.hit
+        x, y, w, h = hx * s, hy * s, hw * s, hh * s
         n = self.size
         for _ in range((rotation // 90) % 4):  # gira o retângulo 90° horário dentro do canvas
             x, y, w, h = n - y - h, x, h, w
@@ -246,15 +259,16 @@ class PetWindow(Gtk.Window):
     def _bubble_text(self, frame: Frame) -> str:
         top = self.top
         busy = [s for s in self.sessions if s.status != "idle"]
-        extra = f"  (+{len(busy) - 1})" if len(busy) > 1 else ""
+        extra = f"\n+{len(busy) - 1} outra(s) sessão(ões) ativa(s)" if len(busy) > 1 else ""
         pointer = self._pointer()
         hovering = pointer is not None and self.pet.contains(*pointer)
 
         if top and top.status == "attention":
-            msg = top.message or "precisa de você"
-            return f"⚠ {top.project}: {msg}{extra}"
+            msg = _traduz(top.message)
+            body = f"⚠ {top.name} precisa de você"
+            return body + (f"\n{msg}" if msg else "") + "\nClique em mim para abrir" + extra
         if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
-            return f"✓ {top.project} terminou — clique para abrir{extra}"
+            return f"✓ {top.name} terminou\nClique em mim para abrir{extra}"
         if not hovering or self.pressed:
             return ""
         if not self.sessions:
@@ -264,14 +278,14 @@ class PetWindow(Gtk.Window):
             detail = STATUS_LABEL.get(s.status, s.status)
             if s.status == "working" and s.tool:
                 detail = f"{detail}: {s.tool}"
-            lines.append(f"● {s.project} — {detail}")
+            lines.append(f"● {s.name}: {detail}")
         return "\n".join(lines)
 
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
         s = self.cfg.scale
         self.bubble.show_text(text, STATUS_COLORS.get(frame.status, STATUS_COLORS["idle"]),
-                              frame.x + self.size // 2, frame.y + (OY - 1) * s, self.pet.area)
+                              frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
 
     # ------------------------------------------------------------ mouse
     def _on_press(self, _w, ev):
@@ -307,7 +321,7 @@ class PetWindow(Gtk.Window):
         menu = Gtk.Menu()
         if self.sessions:
             for s in self.sessions[:8]:
-                item = Gtk.MenuItem(label=f"{s.project} — {STATUS_LABEL.get(s.status, s.status)}")
+                item = Gtk.MenuItem(label=f"{s.name}: {STATUS_LABEL.get(s.status, s.status)}")
                 item.connect("activate", lambda _i, sess=s: (focus.focus_session(sess.claude_pid, sess.project),
                                                               self.store.acknowledge(sess)))
                 menu.append(item)
@@ -316,6 +330,17 @@ class PetWindow(Gtk.Window):
             item.set_sensitive(False)
             menu.append(item)
         menu.append(Gtk.SeparatorMenuItem())
+        skin_item = Gtk.MenuItem(label="Personagem")
+        sub = Gtk.Menu()
+        group = None
+        for name in skins.available():
+            radio = Gtk.RadioMenuItem.new_with_label_from_widget(group, name.capitalize())
+            group = group or radio
+            radio.set_active(name == self.skin.name)
+            radio.connect("toggled", lambda r, n=name: r.get_active() and self._set_skin(n))
+            sub.append(radio)
+        skin_item.set_submenu(sub)
+        menu.append(skin_item)
         for label, minutes in (("Esconder por 30 min", 30), ("Esconder por 2 h", 120)):
             item = Gtk.MenuItem(label=label)
             item.connect("activate", lambda _i, m=minutes: self._hide_for(m))
@@ -325,6 +350,17 @@ class PetWindow(Gtk.Window):
         menu.append(quit_item)
         menu.show_all()
         menu.popup_at_pointer(ev)
+
+    def _set_skin(self, name: str) -> None:
+        if name == self.skin.name:
+            return
+        self.skin = skins.load(name)
+        self.size = self.skin.canvas * self.cfg.scale
+        self.resize(self.size, self.size)
+        self.pet.set_skin(self.skin)
+        self._shape_rot = None
+        self.frame = None
+        self.cfg.save_key("skin", name)
 
     def _hide_for(self, minutes: int) -> None:
         self.hidden_until = time.monotonic() + minutes * 60

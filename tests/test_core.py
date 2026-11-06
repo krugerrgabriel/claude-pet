@@ -125,3 +125,29 @@ class PetTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TitleAndSkinTest(unittest.TestCase):
+    def test_title_prefers_latest_and_custom(self):
+        from claude_pet.state import read_title
+        with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False) as f:
+            f.write('{"type":"ai-title","aiTitle":"Velho"}\n{"type":"user","x":1}\n'
+                    '{"type":"ai-title","aiTitle":"Mascote \\"novo\\""}\n')
+        self.assertEqual(read_title(f.name), 'Mascote "novo"')
+        with open(f.name, "a") as fh:
+            fh.write('{"type":"custom-title","customTitle":"Meu nome"}\n')
+        self.assertEqual(read_title(f.name), "Meu nome")
+        self.assertEqual(read_title("/nao/existe.jsonl"), "")
+        os.unlink(f.name)
+
+    def test_every_skin_has_every_animation(self):
+        from claude_pet import skins
+        from claude_pet.sprites import ANIMATIONS
+        import cairo
+        for name in skins.available():
+            skin = skins.load(name)
+            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, skin.canvas * 2, skin.canvas * 2)
+            for anim in ANIMATIONS:
+                _fps, n = skin.anim_info(anim)
+                for i in range(n):
+                    skin.draw(cairo.Context(surf), anim, i, -1, "attention", 2, "#5ec4b6")

@@ -1,4 +1,4 @@
-"""python3 -m claude_pet — inicia o bichinho (uma instância só)."""
+"""python3 -m claude_pet: inicia o bichinho (uma instância só)."""
 import fcntl
 import signal
 import sys

@@ -1,0 +1,79 @@
+{
+ "name": "slime",
+ "canvas": 51,
+ "facing": 0,
+ "frames": {
+  "idle": {
+   "index": 0,
+   "bbox": [
+    9,
+    24,
+    32,
+    27
+   ]
+  },
+  "sit": {
+   "index": 1,
+   "bbox": [
+    7,
+    29,
+    37,
+    22
+   ]
+  },
+  "sleep": {
+   "index": 2,
+   "bbox": [
+    5,
+    32,
+    41,
+    19
+   ]
+  },
+  "thinking": {
+   "index": 3,
+   "bbox": [
+    8,
+    26,
+    34,
+    25
+   ]
+  },
+  "working": {
+   "index": 4,
+   "bbox": [
+    6,
+    10,
+    38,
+    41
+   ]
+  },
+  "alert": {
+   "index": 5,
+   "bbox": [
+    9,
+    20,
+    33,
+    31
+   ]
+  },
+  "done": {
+   "index": 6,
+   "bbox": [
+    8,
+    23,
+    35,
+    28
+   ]
+  },
+  "grabbed": {
+   "index": 7,
+   "bbox": [
+    12,
+    10,
+    26,
+    41
+   ]
+  }
+ }
+}

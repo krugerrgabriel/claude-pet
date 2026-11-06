@@ -84,6 +84,7 @@ def main() -> None:
         "tool": payload.get("tool_name", "") if event in ("PreToolUse", "PermissionRequest") else ("compact" if event == "PreCompact" else ""),
         "message": message if status == "attention" else "",
         "cwd": payload.get("cwd") or previous.get("cwd", ""),
+        "transcript_path": payload.get("transcript_path") or previous.get("transcript_path", ""),
         "claude_pid": previous.get("claude_pid") or find_claude_pid(),
         "ts": time.time(),
         "since": previous.get("since") if previous.get("status") == status else time.time(),
@@ -98,6 +99,6 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except Exception:  # noqa: BLE001 — um hook quebrado não pode atrapalhar o Claude Code
+    except Exception:  # noqa: BLE001: um hook quebrado não pode atrapalhar o Claude Code
         pass
     sys.exit(0)
