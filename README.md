@@ -45,6 +45,9 @@ claude_pet/focus.py     (foca o terminal da sessão via wmctrl)
 
 ## Personagens
 
+O **pato** usa o [Duck animated sprite](https://pale-tale.itch.io/duck-animated-sprite) da **pale-tale** (CC0).
+O original está em `art/third_party/pale-tale-duck/` e é montado por `python3 tools/import_pale_duck.py`.
+
 Botão direito → **Personagem** troca na hora: Pato, Capivara, Slime ou Robô. A escolha fica salva no `config.json`.
 
 Os personagens PNG saem de uma folha de referência com 8 poses (veja `art/PROMPTS.md`):

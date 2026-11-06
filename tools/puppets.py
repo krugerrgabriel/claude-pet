@@ -324,7 +324,8 @@ def _pixel_duck():
     return duck_pixel.anims()
 
 
-PUPPETS = {"pato": (_pixel_duck, {"pace_thinking": True, "self_hop": True, "scale_ratio": 1.0})}
+# O "pato" agora vem do sprite CC0 da pale-tale (tools/import_pale_duck.py); estes eram protótipos.
+PUPPETS = {}
 
 if __name__ == "__main__":
     for n in sys.argv[1:] or PUPPETS:
