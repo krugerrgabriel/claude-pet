@@ -14,15 +14,8 @@ FILL = (1.0, 0.98, 0.93)
 INK = (0.11, 0.13, 0.17)
 FONT = "Sans Bold 8"
 
-ICONS = {"done": ("✓", "#1e9e57"), "attention": ("!", "#d64545")}
-
-
-def markup(text: str, status: str) -> str:
-    icon = ICONS.get(status)
-    body = GLib.markup_escape_text(text)
-    if icon:
-        return f'<span foreground="{icon[1]}">{icon[0]}</span> {body}'
-    return body
+def markup(text: str, status: str = "") -> str:
+    return GLib.markup_escape_text(text)
 
 
 def make_layout(ctx_or_widget, text: str, status: str) -> Pango.Layout:

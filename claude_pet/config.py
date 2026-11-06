@@ -20,6 +20,8 @@ CONFIG_FILE = Path(os.environ.get("CLAUDE_PET_CONFIG", Path.home() / ".config" /
 class Config:
     # Visual
     skin: str = "pato"             # pato, capivara, slime, robo (ou qualquer pasta em claude_pet/packs/)
+    names: dict = field(default_factory=lambda: {
+        "pato": "Quack", "capivara": "Capi", "slime": "Gosminha", "robo": "Bit"})
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"

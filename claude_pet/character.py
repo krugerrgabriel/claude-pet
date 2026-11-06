@@ -40,6 +40,7 @@ class Frame:
     look: int            # -1/0/1, para onde os olhos apontam
     status: str          # status visual (cor da antena)
     facing: int = 1      # lado para onde o corpo está virado (skins PNG espelham)
+    lean: float = 0.0    # inclinação de pêndulo enquanto é arrastado (px por linha)
 
 
 class Pet:
@@ -78,6 +79,8 @@ class Pet:
         self.drag_offset = (0.0, 0.0)
         self.drag_trail: list[tuple[float, float, float]] = []
         self.hover_since: float | None = None
+        self.lean = 0.0
+        self.lean_v = 0.0
 
     # ------------------------------------------------------------ perímetro
     @property
@@ -179,6 +182,7 @@ class Pet:
         self.jump = 0.0
         look = self.direction
 
+        self._swing(dt)
         if self.mode == "drag":
             anim = "dangle"
         elif self.mode == "free":
@@ -200,7 +204,20 @@ class Pet:
         visual = "sleep" if self.anim == "sleep" else self.status
         if look:
             self.direction = look
-        return Frame(int(x), int(y - self.jump), rot, self.anim, frame, look, visual, self.direction)
+        return Frame(int(x), int(y - self.jump), rot, self.anim, frame, look, visual, self.direction,
+                     self.lean if self.mode in ("drag", "free") else 0.0)
+
+    def _swing(self, dt: float) -> None:
+        """Pêndulo: arrastando pra direita, o corpo fica pra trás (inclina pra esquerda) e balança."""
+        target = 0.0
+        if self.mode == "drag" and len(self.drag_trail) >= 2:
+            t0, x0, _ = self.drag_trail[0]
+            t1, x1, _ = self.drag_trail[-1]
+            if t1 - t0 > 1e-3:
+                target = max(-0.45, min(0.45, -(x1 - x0) / (t1 - t0) / 1400))
+        acc = 70 * (target - self.lean) - 6 * self.lean_v
+        self.lean_v += acc * dt
+        self.lean = max(-0.6, min(0.6, self.lean + self.lean_v * dt))
 
     def set_skin(self, skin) -> None:
         """Troca de personagem: o tamanho muda, então ele solta e cai de novo no chão."""
@@ -272,18 +289,20 @@ class Pet:
 
         st = self.status
         if st == "attention":
-            self.jump = abs(math.sin(now * 7)) * 10
+            if not self.skin.self_hop:
+                self.jump = abs(math.sin(now * 7)) * 10
             return "attention", 0
         if st == "done":
             if now < self.celebrate_until:
-                self.jump = abs(math.sin(now * 9)) * 14
+                if not self.skin.self_hop:
+                    self.jump = abs(math.sin(now * 9)) * 14
                 return "celebrate", 0
             return "waiting", 0
         if st == "working":
             return "work", 0
         if st == "thinking":
             if now > self.action_until:
-                self.idle_action = self.rng.choice(["pace", "pace", "stand"])
+                self.idle_action = self.rng.choice(["pace", "pace", "stand"]) if self.skin.pace_thinking else "stand"
                 self.action_until = now + self.rng.uniform(2.5, 5)
                 self.target_s = min(max(self.anchor_s + self.rng.uniform(-60, 60), 0), self.seg[0] - 1)
             if self.idle_action == "pace" and not self._walk_towards(self.target_s, dt, cfg.walk_speed * 0.5):

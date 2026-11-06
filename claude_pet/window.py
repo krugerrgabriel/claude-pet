@@ -24,10 +24,10 @@ from .state import Session, StateStore  # noqa: E402
 DEBUG = bool(os.environ.get("CLAUDE_PET_DEBUG"))
 
 STATUS_LABEL = {
-    "idle": "ocioso",
+    "idle": "de boa",
     "thinking": "pensando…",
     "working": "trabalhando",
-    "attention": "precisa de você",
+    "attention": "precisando de você",
     "done": "terminou",
 }
 
@@ -187,8 +187,10 @@ class PetWindow(Gtk.Window):
 
         if self.frame is None or (frame.x, frame.y) != (self.frame.x, self.frame.y):
             self.move(frame.x, frame.y)
-        if self.frame is None or (frame.anim, frame.frame, frame.look, frame.rotation, frame.status) != (
-                self.frame.anim, self.frame.frame, self.frame.look, self.frame.rotation, self.frame.status):
+        if self.frame is None or (frame.anim, frame.frame, frame.look, frame.rotation, frame.status, frame.facing,
+                                  round(frame.lean, 2)) != (
+                self.frame.anim, self.frame.frame, self.frame.look, self.frame.rotation, self.frame.status,
+                self.frame.facing, round(self.frame.lean, 2)):
             self.queue_draw()
         if frame.rotation != self._shape_rot:
             self._update_input_shape(frame.rotation)
@@ -221,7 +223,8 @@ class PetWindow(Gtk.Window):
         cr.rotate(math.radians(f.rotation))
         cr.translate(-half, -half)
         look = f.look if self.skin.name == skins.ROBOT else f.facing
-        self.skin.draw(cr, f.anim, f.frame, look, f.status, self.skin.pixel_scale(self.cfg.scale), self.cfg.body_color)
+        self.skin.draw(cr, f.anim, f.frame, look, f.status, self.skin.pixel_scale(self.cfg.scale),
+                       self.cfg.body_color, f.lean)
         return True
 
     def _update_input_shape(self, rotation: int) -> None:
@@ -253,14 +256,20 @@ class PetWindow(Gtk.Window):
             return f"Claude Code terminou{extra}.\nClique em mim para abrir"
         if not hovering or self.pressed:
             return ""
+        name = self.cfg.names.get(self.skin.name, self.skin.name.capitalize())
+
+        def detail(sess):
+            text = STATUS_LABEL.get(sess.status, sess.status)
+            return f"{text} ({sess.tool})" if sess.status == "working" and sess.tool else text
+
         if not self.sessions:
-            return "Nenhuma sessão do Claude Code aberta"
-        lines = []
-        for s in self.sessions[:6]:
-            detail = STATUS_LABEL.get(s.status, s.status)
-            if s.status == "working" and s.tool:
-                detail = f"{detail}: {s.tool}"
-            lines.append(f"● {s.name}: {detail}")
+            return f"Oi, eu sou o {name}!\nNenhuma sessão aberta"
+        if len(self.sessions) == 1:
+            return f"{name} está {detail(self.sessions[0])}"
+        lines = [f"{name}, de olho em {len(self.sessions)} sessões"]
+        for sess in self.sessions[:5]:
+            short = sess.name if len(sess.name) <= 22 else sess.name[:21] + "…"
+            lines.append(f"{short}: {detail(sess)}")
         return "\n".join(lines)
 
     def _update_bubble(self, frame: Frame) -> None:

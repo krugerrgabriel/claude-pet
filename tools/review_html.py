@@ -54,7 +54,7 @@ def render_frame(skin, anim, i, look=1):
 
 def render_pose(skin, pose, with_parts: bool):
     info = skin.frames[pose]
-    n = skin.canvas
+    n = skin.base_canvas
     s = SCALE
     bx, by, bw, bh = info["bbox"]
     pad = 2
@@ -62,16 +62,10 @@ def render_pose(skin, pose, with_parts: bool):
     cr = cairo.Context(surf)
     cr.scale(s, s)
     cr.translate(pad - bx, pad - by)
-    cr.set_source_surface(skin.sheet, -info["index"] * n, 0)
+    cr.set_source_surface(skin.base_sheet, -info["index"] * n, 0)
     cr.get_source().set_filter(cairo.FILTER_NEAREST)
     cr.rectangle(bx, by, bw, bh)
     cr.fill()
-    if with_parts:
-        cr.set_line_width(0.35)
-        for key, (x, y, w, h) in info.get("parts", {}).items():
-            cr.set_source_rgba(*PART_COLORS[key], 0.95)
-            cr.rectangle(x + 0.2, y + 0.2, w - 0.4, h - 0.4)
-            cr.stroke()
     return png_b64(surf), f"{bw}×{bh}"
 
 
@@ -89,17 +83,11 @@ def build():
                         f'<img src="refs/{name}.png" alt="referência {name}"></details>')
 
         if hasattr(skin, "frames"):
-            html.append('<h2>Poses <span>cada desenho extraído, sem movimento</span></h2>'
-                        '<label class="chk"><input type="checkbox" class="parts-toggle"> '
-                        'mostrar regiões que se mexem '
-                        '<i style="--c:#39f">pé esq.</i><i style="--c:#1ee">pé dir.</i>'
-                        '<i style="--c:#f59">braço esq.</i><i style="--c:#f91">braço dir.</i></label>'
-                        '<div class="poses">')
+            html.append('<h2>Poses <span>desenhos de base extraídos da referência; as animações '
+                        'são montadas a partir deles</span></h2><div class="poses">')
             for pose in skin.frames:
                 plain, size = render_pose(skin, pose, False)
-                parts, _ = render_pose(skin, pose, True)
-                html.append(f'<figure class="pose"><div class="stage">'
-                            f'<img class="plain" src="{plain}"><img class="parts" src="{parts}"></div>'
+                html.append(f'<figure class="pose"><div class="stage"><img src="{plain}"></div>'
                             f'<figcaption>{POSE_LABEL.get(pose, pose)}<small>{pose} · {size} px</small>'
                             f'</figcaption></figure>')
             html.append("</div>")

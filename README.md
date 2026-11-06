@@ -53,9 +53,18 @@ Os personagens PNG saem de uma folha de referência com 8 poses (veja `art/PROMP
 python3 tools/extract_refs.py art/refs/capivara.png capivara --facing 1   # --facing 1 = desenho olha p/ direita
 ```
 
-O extrator recorta cada pose, remove o fundo, a sombra e os efeitos, reduz para uma grade de pixel real e salva
-`claude_pet/packs/<nome>/frames.png` + `pack.json`. O movimento (pulinho, estica e achata, espelhar)
-e os balões (zzz, …, !, brilhos, ✓) são feitos pelo código, iguais para todos os personagens.
+O extrator recorta cada pose, remove o fundo, a sombra e os efeitos, e reduz para uma grade de pixel real
+(`claude_pet/packs/<nome>/frames.png`). Depois, `tools/rig.py` monta as animações quadro a quadro com receitas
+por personagem: estica e achata sem deformar o rosto, gingado, passo com as pernas de verdade, mão digitando.
+O resultado vai para `anims.png` + `anims.json`, que é o que o pet toca.
+
+```sh
+python3 tools/rig.py                 # remonta as animações de todos
+python3 tools/review_html.py         # art/review.html: todas as poses e animações para revisar
+```
+
+Cada personagem tem um nome (Quack, Capi, Gosminha, Bit), que aparece no balão ao passar o mouse.
+Os nomes podem ser trocados em `names` no `config.json`.
 
 ## Configurar
 

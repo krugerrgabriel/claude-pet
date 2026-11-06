@@ -151,3 +151,27 @@ class TitleAndSkinTest(unittest.TestCase):
                 _fps, n = skin.anim_info(anim)
                 for i in range(n):
                     skin.draw(cairo.Context(surf), anim, i, -1, "attention", 2, "#5ec4b6")
+
+
+class SwingTest(unittest.TestCase):
+    def test_dragging_right_leans_body_left_then_settles(self):
+        from claude_pet import skins
+        import claude_pet.character as C
+        t = [0.0]
+        orig = C.time.monotonic
+        C.time.monotonic = lambda: t[0]
+        try:
+            pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skins.load("pato"))
+            pet.press(500, 500)
+            for k in range(20):
+                t[0] += 1 / 30
+                pet.motion(500 + 25 * k, 500)
+                f = pet.tick(1 / 30, "idle", None)
+            self.assertLess(f.lean, -0.1)          # corpo ficou pra trás
+            for _ in range(60):
+                t[0] += 1 / 30
+                pet.motion(500 + 25 * 19, 500)    # parou de mexer
+                f = pet.tick(1 / 30, "idle", None)
+            self.assertLess(abs(f.lean), 0.05)    # e voltou a ficar reto
+        finally:
+            C.time.monotonic = orig
