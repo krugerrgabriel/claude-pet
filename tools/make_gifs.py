@@ -24,10 +24,11 @@ SKIN = skins.load()
 
 
 def frames(anim, status, seconds, lean_wave=False):
-    fps, n = SKIN.anim_info(anim)
+    anim_fps, n = SKIN.anim_info(anim)
+    fps = anim_fps
     total = max(n, round(seconds * fps))
     if lean_wave:  # balanço de pêndulo: mais quadros e mais rápido, sempre inclinado
-        total, fps = 20, 12
+        total, fps = 24, 12
     out = []
     size = SKIN.canvas * SCALE
     for i in range(total):
@@ -39,7 +40,8 @@ def frames(anim, status, seconds, lean_wave=False):
         if lean_wave:
             import math
             lean = 0.4 * math.sin(i / total * 2 * math.pi + math.pi / 2)
-        SKIN.draw(cr, anim, i, 1, status, SCALE, "#5ec4b6", lean)
+        anim_frame = int(i * anim_fps / fps)  # o quadro da animação segue o ritmo real dela
+        SKIN.draw(cr, anim, anim_frame, 1, status, SCALE, "#5ec4b6", lean)
         img = Image.frombuffer("RGBA", (size, size), bytes(surf.get_data()), "raw", "BGRA", 0, 1).convert("RGB")
         out.append(img)
     return out, int(1000 / fps)
