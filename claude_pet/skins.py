@@ -32,6 +32,10 @@ def load(name: str):
 class RobotSkin:
     name = ROBOT
 
+    @staticmethod
+    def pixel_scale(scale: int) -> int:
+        return scale
+
     def __init__(self):
         self.canvas = sprites.CANVAS
         self.hit = (sprites.OX, sprites.OY, 20, sprites.CANVAS - sprites.OY)
@@ -50,27 +54,36 @@ class RobotSkin:
         sprites.render(cr, pose, scale, body_color)
 
 
-def _hop(pose: str, n: int, extra: dict | None = None, height: int = 2) -> list:
-    """Pulinho genérico: sobe, desce e achata ao tocar o chão."""
-    seq = [{"dy": 0, "sx": 1.05, "sy": 0.94}, {"dy": -1}, {"dy": -height, "sx": 0.97, "sy": 1.03}, {"dy": -1}]
+# deslocamento (dx, dy) de cada parte: footL/footR = pés, armL/armR = braços/asas
+STEP_L = {"footL": (0, -2), "armR": (0, -2)}            # pé esquerdo no ar, braço oposto balança
+STEP_R = {"footR": (0, -2), "armL": (0, -2)}
+
+
+def _walk(pose: str, n: int, extra: dict | None = None) -> list:
+    """Passo alternado: pé esquerdo, apoio, pé direito, apoio (corpo sobe 1px no apoio)."""
+    seq = [{"parts": STEP_L}, {"dy": -1}, {"parts": STEP_R}, {"dy": -1}]
     return [(pose, dict(seq[i % 4], **(extra or {}))) for i in range(n)]
 
 
 PACK_ANIMS: dict[str, tuple[float, list]] = {
     "stand": (2, [("idle", {}), ("idle", {"sx": 1.02, "sy": 0.97})]),
     "curious": (2, [("idle", {}), ("idle", {"sy": 0.98})]),
-    "walk": (8, _hop("idle", 4)),
+    "walk": (8, _walk("idle", 4)),
     "sit": (1.5, [("sit", {}), ("sit", {"sx": 1.01, "sy": 0.98})]),
     "sleep": (2, [("sleep", {"overlay": "zzz", "oframe": i, "sy": 0.97 if i % 2 else 1.0}) for i in range(4)]),
     "think": (3, [("thinking", {"overlay": "dots", "oframe": i}) for i in range(4)]),
-    "think_walk": (6, [(p, dict(t, overlay="dots", oframe=i // 2)) for i, (p, t) in enumerate(_hop("thinking", 8, height=1))]),
-    "work": (6, [("working", {}), ("working", {"dy": -1})] * 3 + [("working", {"sx": 1.02, "sy": 0.98})]),
-    "attention": (5, [("alert", {"overlay": "bang", "oframe": 0, "sx": 0.97, "sy": 1.04}),
-                      ("alert", {"overlay": "bang", "oframe": 1})]),
-    "celebrate": (6, [("done", {"overlay": "sparkle", "oframe": i, "sy": 1.03 if i else 0.97}) for i in range(2)]),
+    "think_walk": (6, [(p, dict(t, overlay="dots", oframe=i // 2)) for i, (p, t) in enumerate(_walk("thinking", 8))]),
+    "work": (6, [("working", {"parts": {"armL": (0, 1), "armR": (0, -1)}}),
+                 ("working", {"parts": {"armL": (0, -1), "armR": (0, 1)}})] * 3 + [("working", {"dy": -1})]),
+    "attention": (5, [("alert", {"overlay": "bang", "oframe": 0, "parts": {"armL": (0, -2), "armR": (0, 1)}}),
+                      ("alert", {"overlay": "bang", "oframe": 1, "parts": {"armL": (0, 1), "armR": (0, -2)}})]),
+    "celebrate": (6, [("done", {"overlay": "sparkle", "oframe": 0, "parts": {"armL": (0, -2), "armR": (0, -2)}}),
+                      ("done", {"overlay": "sparkle", "oframe": 1, "parts": {"armL": (0, 1), "armR": (0, 1)}})]),
     "waiting": (2, [("done", {"overlay": "check", "oframe": i}) for i in range(3)]),
-    "dangle": (4, [("grabbed", {"dx": -1}), ("grabbed", {"dx": 1})]),
-    "happy": (4, [("idle", {"overlay": "heart", "oframe": i, "dy": -2 if i % 2 else 0}) for i in range(4)]),
+    "dangle": (4, [("grabbed", {"parts": {"footL": (-1, 0), "footR": (1, 1)}}),
+                   ("grabbed", {"parts": {"footL": (-1, 1), "footR": (1, 0)}})]),
+    "happy": (4, [("idle", {"overlay": "heart", "oframe": i,
+                            "parts": {"armL": (0, -2), "armR": (0, -2)} if i % 2 else {}}) for i in range(4)]),
 }
 
 
@@ -88,6 +101,11 @@ class PackSkin:
         y0 = min(b[1] for b in boxes)
         x1 = max(b[0] + b[2] for b in boxes)
         self.hit = (x0, y0, x1 - x0, self.canvas - y0)
+
+    @staticmethod
+    def pixel_scale(scale: int) -> int:
+        """Os desenhos PNG têm ~1,5x mais pixels que o robô; escala menor deixa do mesmo tamanho."""
+        return max(1, round(scale * 2 / 3))
 
     def anim_info(self, anim: str) -> tuple[float, int]:
         fps, frames = PACK_ANIMS[anim]
@@ -107,11 +125,31 @@ class PackSkin:
         flip = -1 if look < 0 else 1
         cr.scale(t.get("sx", 1.0) * flip, t.get("sy", 1.0))
         cr.translate(-cx, -cy)
+        moved = [(info["parts"][k], off) for k, off in t.get("parts", {}).items()
+                 if k in info.get("parts", {}) and off != (0, 0)]
+        src_x = -info["index"] * n
+
+        def paint(dx=0, dy=0):
+            cr.set_source_surface(self.sheet, src_x + dx, dy)
+            cr.get_source().set_filter(cairo.FILTER_NEAREST)
+            cr.paint()
+
+        # corpo: tudo menos as partes que vão se mexer
+        cr.save()
+        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
         cr.rectangle(0, 0, n, n)
+        for (rx, ry, rw, rh), _off in moved:
+            cr.rectangle(rx, ry, rw, rh)
         cr.clip()
-        cr.set_source_surface(self.sheet, -info["index"] * n, 0)
-        cr.get_source().set_filter(cairo.FILTER_NEAREST)
-        cr.paint()
+        paint()
+        cr.restore()
+        # cada parte, deslocada
+        for (rx, ry, rw, rh), (ox, oy) in moved:
+            cr.save()
+            cr.rectangle(rx + ox, ry + oy, rw, rh)
+            cr.clip()
+            paint(ox, oy)
+            cr.restore()
         cr.restore()
 
         overlay = t.get("overlay")

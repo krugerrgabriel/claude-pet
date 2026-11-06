@@ -48,7 +48,7 @@ class Pet:
         from .skins import RobotSkin
         self.cfg = cfg
         self.skin = skin or RobotSkin()
-        self.size = self.skin.canvas * cfg.scale
+        self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         self.area = area
         self.area_at = area_at or (lambda x, y: self.area)
         self.rng = rng or random.Random()
@@ -206,7 +206,7 @@ class Pet:
         """Troca de personagem: o tamanho muda, então ele solta e cai de novo no chão."""
         x, y = self.position()
         self.skin = skin
-        self.size = skin.canvas * self.cfg.scale
+        self.size = skin.canvas * skin.pixel_scale(self.cfg.scale)
         self.mode, self.x, self.y = "free", x, min(y, self.floor_y)
         self.vx = self.vy = 0.0
 

@@ -131,7 +131,7 @@ class PetWindow(Gtk.Window):
         self.cfg = cfg
         self.store = store
         self.skin = skins.load(cfg.skin)
-        self.size = self.skin.canvas * cfg.scale
+        self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         _transparent(self)
         self.set_default_size(self.size, self.size)
         self.resize(self.size, self.size)
@@ -238,7 +238,7 @@ class PetWindow(Gtk.Window):
         cr.rotate(math.radians(f.rotation))
         cr.translate(-half, -half)
         look = f.look if self.skin.name == skins.ROBOT else f.facing
-        self.skin.draw(cr, f.anim, f.frame, look, f.status, self.cfg.scale, self.cfg.body_color)
+        self.skin.draw(cr, f.anim, f.frame, look, f.status, self.skin.pixel_scale(self.cfg.scale), self.cfg.body_color)
         return True
 
     def _update_input_shape(self, rotation: int) -> None:
@@ -246,7 +246,7 @@ class PetWindow(Gtk.Window):
         gdk_win = self.get_window()
         if not gdk_win:
             return
-        s = self.cfg.scale
+        s = self.skin.pixel_scale(self.cfg.scale)
         hx, hy, hw, hh = self.skin.hit
         x, y, w, h = hx * s, hy * s, hw * s, hh * s
         n = self.size
@@ -259,16 +259,15 @@ class PetWindow(Gtk.Window):
     def _bubble_text(self, frame: Frame) -> str:
         top = self.top
         busy = [s for s in self.sessions if s.status != "idle"]
-        extra = f"\n+{len(busy) - 1} outra(s) sessão(ões) ativa(s)" if len(busy) > 1 else ""
+        extra = f" (+{len(busy) - 1})" if len(busy) > 1 else ""
         pointer = self._pointer()
         hovering = pointer is not None and self.pet.contains(*pointer)
 
         if top and top.status == "attention":
             msg = _traduz(top.message)
-            body = f"⚠ {top.name} precisa de você"
-            return body + (f"\n{msg}" if msg else "") + "\nClique em mim para abrir" + extra
+            return f"⚠ {msg or 'Claude Code precisa de você'}. Clique em mim para abrir{extra}"
         if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
-            return f"✓ {top.name} terminou\nClique em mim para abrir{extra}"
+            return f"✓ Claude Code terminou. Clique em mim para abrir{extra}"
         if not hovering or self.pressed:
             return ""
         if not self.sessions:
@@ -283,7 +282,7 @@ class PetWindow(Gtk.Window):
 
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
-        s = self.cfg.scale
+        s = self.skin.pixel_scale(self.cfg.scale)
         self.bubble.show_text(text, STATUS_COLORS.get(frame.status, STATUS_COLORS["idle"]),
                               frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
 
@@ -355,7 +354,7 @@ class PetWindow(Gtk.Window):
         if name == self.skin.name:
             return
         self.skin = skins.load(name)
-        self.size = self.skin.canvas * self.cfg.scale
+        self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
         self.resize(self.size, self.size)
         self.pet.set_skin(self.skin)
         self._shape_rot = None
