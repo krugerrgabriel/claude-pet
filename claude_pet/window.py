@@ -133,6 +133,7 @@ class PetWindow(Gtk.Window):
         self.pressed = False
         self._shape_rot = None
         self._last_dbg = 0.0
+        self._done_hover_since = None
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK
                         | Gdk.EventMask.POINTER_MOTION_MASK)
@@ -182,8 +183,10 @@ class PetWindow(Gtk.Window):
             self.hidden_until = 0.0
             self.show_all()
 
+        pointer = self._pointer()
+        self._dismiss_done_on_hover(pointer, now)
         status = self.top.status if self.top else "idle"
-        frame = self.pet.tick(dt, status, self._pointer())
+        frame = self.pet.tick(dt, status, pointer)
 
         if self.frame is None or (frame.x, frame.y) != (self.frame.x, self.frame.y):
             self.move(frame.x, frame.y)
@@ -208,6 +211,21 @@ class PetWindow(Gtk.Window):
             if gdk_win:
                 gdk_win.raise_()
         return True
+
+    def _dismiss_done_on_hover(self, pointer, now: float) -> None:
+        """Mouse parado em cima do Bit por um instante = "vi que terminou": some o balão e o ✓."""
+        hovering = pointer is not None and self.pet.contains(*pointer) and not self.pressed
+        if not (hovering and self.top and self.top.status == "done"):
+            self._done_hover_since = None
+            return
+        self._done_hover_since = self._done_hover_since or now
+        if now - self._done_hover_since >= 0.6:
+            for sess in self.sessions:
+                if sess.status == "done":
+                    self.store.acknowledge(sess)
+            self._done_hover_since = None
+            self.sessions = self.store.sessions()
+            self.top = self.sessions[0] if self.sessions else None
 
     # ------------------------------------------------------------ desenho
     def _draw(self, _w, cr):
