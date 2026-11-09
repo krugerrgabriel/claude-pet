@@ -79,6 +79,16 @@ Not into robots? Right click → **Character**. Every character does everything 
 
 ## 📦 Installation
 
+### ⚡ Quick way (one line)
+
+```bash
+mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.tar.gz | tar xz -C ~/.local/share && python3 ~/.local/share/claude-pet/install.py && ~/.local/bin/claude-pet &
+```
+
+Downloads the latest [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) into `~/.local/share/claude-pet`, installs the hooks and the launcher, and starts the pet. **To update, run the same command** (then quit the pet from its menu and run `claude-pet` again). To remove it: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+
+### 🛠️ Or from source
+
 ### 1️⃣ Clone the repository
 
 ```bash

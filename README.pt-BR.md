@@ -79,6 +79,16 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 
 ## 📦 Instalação
 
+### ⚡ Jeito rápido (uma linha)
+
+```bash
+mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.tar.gz | tar xz -C ~/.local/share && python3 ~/.local/share/claude-pet/install.py && ~/.local/bin/claude-pet &
+```
+
+Baixa a última [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) em `~/.local/share/claude-pet`, instala os hooks e o atalho, e já chama o pet. **Pra atualizar, é o mesmo comando** (depois feche o pet pelo menu e chame `claude-pet` de novo). Pra remover: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+
+### 🛠️ Ou pelo código-fonte
+
 ### 1️⃣ Clone o repositório
 
 ```bash
