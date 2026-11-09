@@ -47,6 +47,24 @@ def _traduz(msg: str) -> str:
     return msg
 
 
+def _crosses(p0, p1, rect) -> bool:
+    """O mouse passou por dentro de rect = (x, y, w, h) entre um tick e outro?
+
+    Amostra o segmento p0→p1 a cada ~3 px, então uma passada rápida por cima também conta.
+    """
+    if p1 is None or rect is None:
+        return False
+    x, y, w, h = rect
+    p0 = p0 or p1
+    steps = max(1, int(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / 3))
+    for i in range(steps + 1):
+        t = i / steps
+        px, py = p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t
+        if x <= px <= x + w and y <= py <= y + h:
+            return True
+    return False
+
+
 def _transparent(win: Gtk.Window) -> None:
     screen = win.get_screen()
     visual = screen.get_rgba_visual()
@@ -68,19 +86,21 @@ class Bubble(Gtk.Window):
         _transparent(self)
         self.key = None
         self.layout = None
+        self.rect = None  # (x, y, w, h) na tela quando visível
         self.tail_x = 0
         self.tail_down = True
         self.connect("draw", self._draw)
         self.connect("realize", lambda w: w.input_shape_combine_region(cairo.Region()))
 
-    def show_text(self, text: str, status: str, anchor_x: int, anchor_y: int, area: Rect) -> None:
+    def show_text(self, text: str, anchor_x: int, anchor_y: int, area: Rect) -> None:
         if not text:
             self.hide()
             self.key = None
+            self.rect = None
             return
-        if (text, status) != self.key:
-            self.key = (text, status)
-            self.layout = bubble.make_layout(self, text, status)
+        if text != self.key:
+            self.key = text
+            self.layout = bubble.make_layout(self, text)
             self.resize(*bubble.size_for(self.layout))
             self.queue_draw()
         w, h = bubble.size_for(self.layout)
@@ -94,6 +114,7 @@ class Bubble(Gtk.Window):
             self.tail_x, self.tail_down = tail_x, tail_down
             self.queue_draw()
         self.move(int(x), int(y))
+        self.rect = (int(x), int(y), w, h)
         if not self.get_visible():
             self.show()
 
@@ -113,7 +134,7 @@ class PetWindow(Gtk.Window):
         super().__init__(type=Gtk.WindowType.POPUP)
         self.cfg = cfg
         self.store = store
-        self.skin = skins.load()
+        self.skin = skins.load(cfg.skin)
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         _transparent(self)
         self.set_default_size(self.size, self.size)
@@ -133,7 +154,10 @@ class PetWindow(Gtk.Window):
         self.pressed = False
         self._shape_rot = None
         self._last_dbg = 0.0
-        self._done_hover_since = None
+        self._last_pointer = None
+        self._just_seen = None      # (sessão, monotonic) do "terminou" dispensado no hover: o clique ainda abre
+        self._quiet_hover = False   # acabou de dispensar o "terminou": sem balão até o mouse sair
+        self.sleep_since = 0.0      # time.time() de quando foi botado pra dormir
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK
                         | Gdk.EventMask.POINTER_MOTION_MASK)
@@ -176,6 +200,7 @@ class PetWindow(Gtk.Window):
             self.last_poll = now
             self.sessions = self.store.sessions()
             self.top = self.sessions[0] if self.sessions else None
+            self._maybe_wake()
 
         if now < self.hidden_until:
             return True
@@ -195,8 +220,8 @@ class PetWindow(Gtk.Window):
                 self.frame.anim, self.frame.frame, self.frame.look, self.frame.rotation, self.frame.status,
                 self.frame.facing, round(self.frame.lean, 2)):
             self.queue_draw()
-        if frame.rotation != self._shape_rot:
-            self._update_input_shape(frame.rotation)
+        if (frame.rotation, frame.facing) != self._shape_rot:
+            self._update_input_shape(frame.rotation, frame.facing)
         self.frame = frame
 
         self._update_bubble(frame)
@@ -213,19 +238,41 @@ class PetWindow(Gtk.Window):
         return True
 
     def _dismiss_done_on_hover(self, pointer, now: float) -> None:
-        """Mouse parado em cima do Bit por um instante = "vi que terminou": some o balão e o ✓."""
-        hovering = pointer is not None and self.pet.contains(*pointer) and not self.pressed
-        if not (hovering and self.top and self.top.status == "done"):
-            self._done_hover_since = None
+        """Mouse passou (mesmo rapidinho) pelo Bit ou pelo balão = "vi que terminou": some o balão e o ✓."""
+        prev, self._last_pointer = self._last_pointer, pointer
+        x, y = self.pet.position()
+        pet_rect = (x, y, self.size, self.size)
+        if self._quiet_hover and not (pointer and self.pet.contains(*pointer)):
+            self._quiet_hover = False
+        if self.pressed or not (self.top and self.top.status == "done"):
             return
-        self._done_hover_since = self._done_hover_since or now
-        if now - self._done_hover_since >= 0.6:
-            for sess in self.sessions:
-                if sess.status == "done":
-                    self.store.acknowledge(sess)
-            self._done_hover_since = None
-            self.sessions = self.store.sessions()
-            self.top = self.sessions[0] if self.sessions else None
+        if not (_crosses(prev, pointer, pet_rect) or _crosses(prev, pointer, self.bubble.rect)):
+            return
+        self._just_seen = (self.top, now)
+        for sess in self.sessions:
+            if sess.status == "done":
+                self.store.acknowledge(sess)
+        self.sessions = self.store.sessions()
+        self.top = self.sessions[0] if self.sessions else None
+        self._quiet_hover = True
+
+    # ------------------------------------------------------------ dormir
+    def _sleep(self) -> None:
+        self.sleep_since = time.time()
+        self.pet.sleep_now()
+
+    def _wake(self) -> None:
+        self.sleep_since = 0.0
+        self.pet.wake()
+
+    def _maybe_wake(self) -> None:
+        """Acorda com um prompt novo seu ou quando o Claude pede permissão (aí ele precisa de você)."""
+        if not self.sleep_since:
+            return
+        for sess in self.sessions:
+            if sess.prompt_ts > self.sleep_since or (sess.status == "attention" and sess.since > self.sleep_since):
+                self._wake()
+                return
 
     # ------------------------------------------------------------ desenho
     def _draw(self, _w, cr):
@@ -242,22 +289,24 @@ class PetWindow(Gtk.Window):
         cr.translate(-half, -half)
         look = f.look
         self.skin.draw(cr, f.anim, f.frame, look, f.status, self.skin.pixel_scale(self.cfg.scale),
-                       self.cfg.body_color, f.lean)
+                       self.cfg.body_color, f.lean, f.facing)
         return True
 
-    def _update_input_shape(self, rotation: int) -> None:
+    def _update_input_shape(self, rotation: int, facing: int = 1) -> None:
         """Só a área do robô recebe clique; o resto da janela deixa o mouse passar."""
         gdk_win = self.get_window()
         if not gdk_win:
             return
         s = self.skin.pixel_scale(self.cfg.scale)
         hx, hy, hw, hh = self.skin.hit
+        if getattr(self.skin, "side_view", False) and facing < 0:  # virado pra esquerda: área espelhada
+            hx = self.skin.canvas - hx - hw
         x, y, w, h = hx * s, hy * s, hw * s, hh * s
         n = self.size
         for _ in range((rotation // 90) % 4):  # gira o retângulo 90° horário dentro do canvas
             x, y, w, h = n - y - h, x, h, w
         self.input_shape_combine_region(cairo.Region(cairo.RectangleInt(int(x), int(y), int(w), int(h))))
-        self._shape_rot = rotation
+        self._shape_rot = (rotation, facing)
 
     # ------------------------------------------------------------ balão
     def _bubble_text(self, frame: Frame) -> str:
@@ -272,9 +321,11 @@ class PetWindow(Gtk.Window):
             return f"{msg or 'Claude Code precisa de você'}{extra}.\nClique em mim para abrir"
         if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
             return f"Claude Code terminou{extra}.\nClique em mim para abrir"
-        if not hovering or self.pressed:
+        if not hovering or self.pressed or self._quiet_hover:
             return ""
-        name = self.cfg.pet_name
+        name = self.cfg.display_name
+        if self.pet.forced_sleep:
+            return f"{name} está dormindo até o próximo prompt"
         if not self.sessions:
             return f"{name}: nenhuma sessão aberta"
         if len(self.sessions) == 1:
@@ -292,9 +343,7 @@ class PetWindow(Gtk.Window):
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
         s = self.skin.pixel_scale(self.cfg.scale)
-        status = self.top.status if (self.top and text) else "idle"
-        self.bubble.show_text(text, status if status in ("done", "attention") else "idle",
-                              frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
+        self.bubble.show_text(text, frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
 
     # ------------------------------------------------------------ mouse
     def _on_press(self, _w, ev):
@@ -320,9 +369,13 @@ class PetWindow(Gtk.Window):
 
     def _click(self) -> None:
         top = self.top
+        seen = self._just_seen
         if top and top.status in ("attention", "done"):
             focus.focus_session(top.claude_pid, top.project)
             self.store.acknowledge(top)
+        elif seen and time.monotonic() - seen[1] < 8:  # passou o mouse e já clicou: abre o terminal mesmo assim
+            self._just_seen = None
+            focus.focus_session(seen[0].claude_pid, seen[0].project)
         else:
             self.pet.cheer()
 
@@ -339,6 +392,17 @@ class PetWindow(Gtk.Window):
             item.set_sensitive(False)
             menu.append(item)
         menu.append(Gtk.SeparatorMenuItem())
+        menu.append(self._skin_menu())
+        rename = Gtk.MenuItem(label="Mudar nome…")
+        rename.connect("activate", lambda _i: self._rename())
+        menu.append(rename)
+        if self.pet.forced_sleep:
+            item = Gtk.MenuItem(label="Acordar")
+            item.connect("activate", lambda _i: self._wake())
+        else:
+            item = Gtk.MenuItem(label="Botar pra dormir")
+            item.connect("activate", lambda _i: self._sleep())
+        menu.append(item)
         for label, minutes in (("Esconder por 30 min", 30), ("Esconder por 2 h", 120)):
             item = Gtk.MenuItem(label=label)
             item.connect("activate", lambda _i, m=minutes: self._hide_for(m))
@@ -348,6 +412,52 @@ class PetWindow(Gtk.Window):
         menu.append(quit_item)
         menu.show_all()
         menu.popup_at_pointer(ev)
+
+    def _rename(self) -> None:
+        """Janelinha pra escolher o nome do pet. Vazio = "Seu pet"."""
+        dlg = Gtk.Dialog(title="Nome do pet")
+        dlg.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Salvar", Gtk.ResponseType.OK)
+        dlg.set_default_response(Gtk.ResponseType.OK)
+        dlg.set_keep_above(True)
+        dlg.set_position(Gtk.WindowPosition.MOUSE)
+        dlg.set_resizable(False)
+        box = dlg.get_content_area()
+        box.set_border_width(12)
+        box.set_spacing(8)
+        box.add(Gtk.Label(label="Como seu pet se chama?", xalign=0))
+        entry = Gtk.Entry(text=self.cfg.pet_name or "", placeholder_text="Seu pet", max_length=24,
+                          activates_default=True)
+        box.add(entry)
+        dlg.show_all()
+        response = dlg.run()   # o loop do pet continua rodando enquanto a janelinha está aberta
+        name = entry.get_text().strip()
+        dlg.destroy()
+        if response == Gtk.ResponseType.OK:
+            self.cfg.save_key("pet_name", name)
+
+    def _skin_menu(self) -> Gtk.MenuItem:
+        sub = Gtk.Menu()
+        group = None
+        for name in skins.available():
+            item = Gtk.RadioMenuItem.new_with_label_from_widget(group, skins.label(name))
+            group = group or item
+            item.set_active(name == self.skin.name)
+            item.connect("toggled", lambda i, n=name: i.get_active() and self._set_skin(n))
+            sub.append(item)
+        root = Gtk.MenuItem(label="Personagem")
+        root.set_submenu(sub)
+        return root
+
+    def _set_skin(self, name: str) -> None:
+        if name == self.skin.name:
+            return
+        self.skin = skins.load(name)
+        self.cfg.save_key("skin", name)
+        self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
+        self.resize(self.size, self.size)
+        self.pet.set_skin(self.skin)   # solta e cai de novo no chão
+        self._shape_rot = None         # recalcula a área clicável no próximo tick
+        self.queue_draw()
 
     def _hide_for(self, minutes: int) -> None:
         self.hidden_until = time.monotonic() + minutes * 60

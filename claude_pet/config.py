@@ -13,13 +13,15 @@ from pathlib import Path
 CACHE_DIR = Path(os.environ.get("CLAUDE_PET_HOME", Path.home() / ".cache" / "claude-pet"))
 SESSIONS_DIR = CACHE_DIR / "sessions"
 LOCK_FILE = CACHE_DIR / "pet.lock"
+DEFAULT_NAME = "Seu pet"
 CONFIG_FILE = Path(os.environ.get("CLAUDE_PET_CONFIG", Path.home() / ".config" / "claude-pet" / "config.json"))
 
 
 @dataclass
 class Config:
     # Visual
-    pet_name: str = "Bit"
+    pet_name: str = ""             # vazio = "Seu pet"; muda pelo menu "Mudar nome…"
+    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"
@@ -33,6 +35,7 @@ class Config:
     # Estados do Claude (segundos)
     thinking_timeout: float = 600.0   # sem eventos depois do prompt → considera ocioso (ex.: Esc)
     tool_timeout: float = 1800.0      # ferramenta rodando sem PostToolUse
+    work_hold: float = 5.0            # depois de uma ferramenta, segura "trabalhando" no mínimo isso antes de "pensando"
     done_linger: float = 900.0        # quanto tempo o "terminou, te esperando" fica visível
     celebrate_for: float = 3.5        # duração da comemoração ao terminar
     session_stale: float = 6 * 3600   # remove sessões sem eventos há esse tempo
@@ -42,6 +45,10 @@ class Config:
     hover_pet_time: float = 1.2       # cursor parado em cima → carinho
 
     extra: dict = field(default_factory=dict)
+
+    @property
+    def display_name(self) -> str:
+        return (self.pet_name or "").strip() or DEFAULT_NAME
 
     def save_key(self, key: str, value) -> None:
         """Grava uma chave no config.json preservando as outras."""

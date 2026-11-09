@@ -47,6 +47,17 @@ Você manda o prompt, o Claude Code começa a trabalhar e você vai fazer outra 
 
 > **Seu terminal não precisa mais estar na tela. O Bit está.**
 
+### 🐾 Escolha seu bichinho
+
+Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit faz (andar no teto, pensar, digitar, pedir atenção, comemorar, dormir, balançar no arraste) e mostram o status pela cor de um detalhe:
+
+| | Personagem | Onde fica a "luzinha" do status |
+|---|---|---|
+| <img src="docs/chars/robo.gif" width="300"> | **Bit**, o robô | Antena |
+| <img src="docs/chars/lagartixa.gif" width="300"> | **Lagartixa**, a que mais combina com andar na parede | Pintinhas nas costas |
+| <img src="docs/chars/gosminha.gif" width="300"> | **Gosminha**, pulinhos de gelatina | Bolhinha dentro da gosma |
+| <img src="docs/chars/capivara.gif" width="300"> | **Capivara**, zen até o Claude precisar de você | Frutinha na cabeça |
+
 ---
 
 ## ✨ Recursos
@@ -104,10 +115,10 @@ Pronto. 🎉 Abra uma sessão nova do Claude Code e veja ele em ação.
 | **Clique** (quando ele pede algo ou terminou) | Foca o terminal daquela sessão e limpa o ✓ |
 | **Clique** (em qualquer outro momento) | Ele fica feliz |
 | **Passar o mouse** | Status em uma linha: *"Bit está trabalhando (Bash)"* |
-| **Mouse parado em cima por um instante** (quando terminou) | Dispensa o balão de "terminou" e o ✓ |
+| **Passar o mouse** (mesmo rapidinho) pelo bichinho ou pelo balão, quando terminou | Dispensa o balão de "terminou" e o ✓ (um clique logo depois ainda abre o terminal) |
 | **Deixar o mouse parado em cima** | Carinho ❤ |
 | **Arrastar e soltar** | Pega ele, balança, arremessa |
-| **Botão direito** | Lista de chats (clique pra focar), esconder por 30 min / 2 h, sair |
+| **Botão direito** | Lista de chats (clique pra focar), **Personagem**, **Mudar nome…**, **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
 
 ---
 
@@ -120,7 +131,8 @@ Só se quiser: tudo funciona sem configurar nada.
 
 ```json
 {
-  "pet_name": "Bit",
+  "skin": "robo",
+  "pet_name": "",
   "scale": 3,
   "body_color": "#5ec4b6",
   "walk_speed": 45,
@@ -133,13 +145,15 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `pet_name` | Nome usado nos balões |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha` ou `capivara` (o menu grava aqui) |
+| `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
-| `body_color` | Qualquer cor pro corpo dele |
+| `body_color` | Qualquer cor pro corpo do Bit (só o robô) |
 | `walk_speed` | Pixels por segundo |
 | `climb_chance` | Frequência com que ele sobe paredes e teto (0 = nunca) |
 | `sleep_after` | Segundos sem atividade até ele cochilar |
 | `done_linger` | Segundos que o "terminou ✓" fica se você não clicar |
+| `work_hold` | Segundos mínimos em "trabalhando" depois de uma ferramenta, pra não ficar piscando entre pensar e trabalhar (padrão 5) |
 | `monitor` | Índice do monitor, `-1` = principal |
 
 Todas as chaves são opcionais. Reinicie o Bit depois de editar.
@@ -202,6 +216,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 ```
 claude-pet/
 ├── claude_pet/          ← o pet (python3 -m claude_pet)
+│   └── chars/           ← lagartixa, gosminha, capivara (um arquivo cada)
 ├── hooks/               ← o hook do Claude Code
 ├── tests/               ← hook → estado → comportamento
 ├── tools/               ← prévias dos sprites, página de revisão, GIFs do README

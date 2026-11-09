@@ -21,7 +21,8 @@ EVENT_STATUS = {
     "PostToolUse": "thinking",
     "PostToolUseFailure": "thinking",
     "PreCompact": "working",
-    "SubagentStop": None,      # subagente terminou, a sessão principal continua: só atualiza o ts
+    "SubagentStart": None,     # subagentes são tratados à parte (ver `agents` em main)
+    "SubagentStop": None,
     "Stop": "done",
     "Notification": "attention",
     "PermissionRequest": "attention",
@@ -43,6 +44,12 @@ def find_claude_pid() -> int:
         except (OSError, ValueError, IndexError):
             break
     return 0
+
+
+# mensagens que o próprio Claude Code injeta como "prompt" quando um subagente termina
+SYSTEM_PROMPTS = ("<task-notification", "<agent-message")
+WAKE_GRACE = 15.0   # s de "pensando" depois do último subagente, esperando o Claude ser acordado
+AGENT_STALE = 1800  # s sem notícia de um subagente: considera que ele morreu (não segura o pet pra sempre)
 
 
 def main() -> None:
@@ -67,27 +74,77 @@ def main() -> None:
     except (OSError, ValueError):
         previous = {}
 
-    status = EVENT_STATUS.get(event, previous.get("status", "idle"))
-    if status is None:
-        status = previous.get("status", "thinking")
-
-    # "idle_prompt" = Claude parado esperando você digitar (já terminou); não é pedido de permissão
+    now = time.time()
+    agent_id = str(payload.get("agent_id") or "")
     notification_type = payload.get("notification_type", "")
     message = payload.get("message", "")
-    if event == "Notification" and notification_type == "idle_prompt":
-        status = "done" if previous.get("status") in ("done", "idle", None) else previous.get("status")
+    asks_you = event == "PermissionRequest" or (event == "Notification" and notification_type != "idle_prompt")
+
+    # Subagentes mandam eventos com o MESMO session_id da conversa, mas com agent_id.
+    # Guardamos quais estão rodando; enquanto houver algum, a conversa não "terminou".
+    agents = {k: v for k, v in (previous.get("agents") or {}).items() if now - float(v) < AGENT_STALE}
+    main_status = previous.get("main_status") or previous.get("status") or "idle"
+    attention_from = previous.get("attention_from", "")
+    waking_until = 0.0
+
+    if agent_id:
+        if event == "SubagentStop":
+            agents.pop(agent_id, None)
+            if not agents and main_status == "done":
+                # a conversa já tinha parado esperando os subagentes; o Claude costuma ser acordado logo em
+                # seguida. Mostra "pensando" só por uns segundos: se o aviso já tinha chegado antes deste
+                # evento (corrida), ninguém mais escreve aqui e o pet volta sozinho pra "terminou".
+                waking_until = now + WAKE_GRACE
+        else:
+            agents[agent_id] = now
+        if asks_you:
+            main_status, attention_from = "attention", agent_id
+        elif main_status == "attention" and attention_from == agent_id and event != "SubagentStop":
+            main_status = "thinking"  # você respondeu e o subagente seguiu
+    else:
+        new = EVENT_STATUS.get(event, main_status)
+        if event == "Notification" and notification_type == "idle_prompt":
+            # "idle_prompt" = Claude parado esperando você digitar (já terminou); não é pedido de permissão
+            new = "done" if main_status in ("done", "idle") else main_status
+        if new is not None:
+            main_status = new
+        if main_status == "attention":
+            attention_from = "main"
+
+    # o que o pet mostra: a conversa manda; subagentes só seguram "trabalhando" quando ela já parou
+    # (senão aparece "terminou" com eles ainda rodando). Com a conversa ativa, pensando continua pensando.
+    status = main_status
+    if agents and status in ("idle", "done"):
+        status = "working"
+    elif waking_until:
+        status = "thinking"
+
+    # aviso de subagente terminado também chega como UserPromptSubmit; não é prompt seu
+    prompt = str(payload.get("prompt") or "")
+    is_your_prompt = event == "UserPromptSubmit" and not prompt.lstrip().startswith(SYSTEM_PROMPTS)
 
     state = {
         "session_id": session_id,
         "status": status,
+        "main_status": main_status,
+        "agents": agents,
+        "attention_from": attention_from if main_status == "attention" else "",
+        "waking_until": waking_until,
+        # quando a conversa parou: o "já vi que terminou" fica preso a isso, não ao último evento qualquer
+        "done_ts": (now if (event == "Stop" and not agent_id) or previous.get("main_status") != "done"
+                    else previous.get("done_ts") or now) if main_status == "done" else 0,
         "event": event,
         "tool": payload.get("tool_name", "") if event in ("PreToolUse", "PermissionRequest") else ("compact" if event == "PreCompact" else ""),
         "message": message if status == "attention" else "",
         "cwd": payload.get("cwd") or previous.get("cwd", ""),
         "transcript_path": payload.get("transcript_path") or previous.get("transcript_path", ""),
         "claude_pid": previous.get("claude_pid") or find_claude_pid(),
-        "ts": time.time(),
-        "since": previous.get("since") if previous.get("status") == status else time.time(),
+        "ts": now,
+        "since": previous.get("since") if previous.get("status") == status else now,
+        # último prompt seu: acorda o pet do "botar pra dormir"
+        "prompt_ts": now if is_your_prompt else previous.get("prompt_ts", 0),
+        # última ferramenta iniciada (conversa ou subagente): o pet segura "trabalhando" uns segundos (debounce)
+        "work_ts": now if event in ("PreToolUse", "PreCompact") else previous.get("work_ts", 0),
     }
 
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)

@@ -47,6 +47,17 @@ You send a prompt, Claude Code starts working, and you go do something else. The
 
 > **Your terminal doesn't need to be on screen anymore. Bit is.**
 
+### 🐾 Pick your pet
+
+Not into robots? Right click → **Personagem** (character). Every character does everything Bit does (walking on the ceiling, thinking, typing, asking for you, celebrating, sleeping, swinging when dragged) and shows the status through the color of one detail:
+
+| | Character | Where the status "light" is |
+|---|---|---|
+| <img src="docs/chars/robo.gif" width="300"> | **Bit**, the robot | Antenna |
+| <img src="docs/chars/lagartixa.gif" width="300"> | **Lagartixa** (gecko), born to walk on walls | Spots on its back |
+| <img src="docs/chars/gosminha.gif" width="300"> | **Gosminha** (slime), jelly hops | Bubble inside the goo |
+| <img src="docs/chars/capivara.gif" width="300"> | **Capivara** (capybara), zen until Claude needs you | Fruit on its head |
+
 ---
 
 ## ✨ Features
@@ -104,10 +115,10 @@ Done. 🎉 Open a new Claude Code session and watch him go.
 | **Click** (when he's asking for you or done) | Focuses the terminal of that session and clears the ✓ |
 | **Click** (any other time) | He gets happy |
 | **Hover** | One-line status: *"Bit está trabalhando (Bash)"* |
-| **Hover for a moment** (when he's done) | Dismisses the "done" bubble and the ✓ |
+| **Hover** (even a quick pass) over the pet or the bubble, when done | Dismisses the "done" bubble and the ✓ (a click right after still opens the terminal) |
 | **Hover and wait** | Petting ❤ |
 | **Drag and release** | Pick him up, swing him around, throw him |
-| **Right click** | List of chats (click one to focus it), hide for 30 min / 2 h, quit |
+| **Right click** | List of chats (click one to focus it), **character**, **rename**, **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
 
 ---
 
@@ -120,7 +131,8 @@ Only if you want to: everything works out of the box.
 
 ```json
 {
-  "pet_name": "Bit",
+  "skin": "robo",
+  "pet_name": "",
   "scale": 3,
   "body_color": "#5ec4b6",
   "walk_speed": 45,
@@ -133,13 +145,15 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `pet_name` | Name used in the bubbles |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha` or `capivara` (the menu saves it here) |
+| `pet_name` | Name used in the bubbles (empty = "Seu pet"; the **Mudar nome…** menu item saves it here) |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
-| `body_color` | Any color for his body |
+| `body_color` | Any color for Bit's body (robot only) |
 | `walk_speed` | Pixels per second |
 | `climb_chance` | How often he climbs walls and the ceiling (0 = never) |
 | `sleep_after` | Seconds without activity before he naps |
 | `done_linger` | Seconds the "done ✓" stays if you don't click him |
+| `work_hold` | Minimum seconds he stays "working" after a tool runs, so he doesn't flicker between thinking and working (default 5) |
 | `monitor` | Monitor index, `-1` = primary |
 
 All keys are optional. Restart Bit after editing.
@@ -202,6 +216,7 @@ Removes only Bit's hooks (backing up `settings.json` first), the `claude-pet` co
 ```
 claude-pet/
 ├── claude_pet/          ← the pet (python3 -m claude_pet)
+│   └── chars/           ← gecko, slime, capybara (one file each)
 ├── hooks/               ← the Claude Code hook
 ├── tests/               ← hook → state → behavior
 ├── tools/               ← sprite previews, review page, README GIFs

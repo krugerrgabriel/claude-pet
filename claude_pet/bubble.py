@@ -14,18 +14,14 @@ FILL = (1.0, 0.98, 0.93)
 INK = (0.11, 0.13, 0.17)
 FONT = "Sans Bold 8"
 
-def markup(text: str, status: str = "") -> str:
-    return GLib.markup_escape_text(text)
-
-
-def make_layout(ctx_or_widget, text: str, status: str) -> Pango.Layout:
+def make_layout(ctx_or_widget, text: str) -> Pango.Layout:
     if hasattr(ctx_or_widget, "create_pango_layout"):
         layout = ctx_or_widget.create_pango_layout("")
     else:
         layout = PangoCairo.create_layout(ctx_or_widget)
     layout.set_font_description(Pango.FontDescription(FONT))
     layout.set_alignment(Pango.Alignment.CENTER)
-    layout.set_markup(markup(text, status), -1)
+    layout.set_markup(GLib.markup_escape_text(text), -1)
     return layout
 
 

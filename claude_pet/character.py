@@ -70,6 +70,7 @@ class Pet:
         self.celebrate_until = 0.0
         self.happy_until = 0.0
         self.last_activity = time.monotonic()
+        self.forced_sleep = False   # "botar pra dormir": fica dormindo até o próximo prompt
 
         self.anim = "dangle"
         self.anim_started = time.monotonic()
@@ -177,8 +178,24 @@ class Pet:
         return False
 
     def cheer(self, seconds: float = 2.5) -> None:
+        if self.forced_sleep:
+            return
         self.happy_until = time.monotonic() + seconds
         self.last_activity = time.monotonic()
+
+    def sleep_now(self) -> None:
+        """Para de passear e dorme no chão até wake()."""
+        self.forced_sleep = True
+        self.happy_until = 0.0
+        self.idle_action = "sleep"
+
+    def wake(self) -> None:
+        if not self.forced_sleep:
+            return
+        self.forced_sleep = False
+        now = time.monotonic()
+        self.last_activity = now
+        self.idle_action, self.action_until = "pause", now + 1.5
 
     # ------------------------------------------------------------ tick
     def position(self) -> tuple[float, float]:
@@ -200,9 +217,11 @@ class Pet:
         elif self.mode == "free":
             anim = self._physics(dt)
         else:
-            if self.status != "idle" and not self.on_floor:
+            if (self.status != "idle" or self.forced_sleep) and not self.on_floor:
                 self._let_go()
                 anim = "dangle"
+            elif self.forced_sleep:
+                anim, look = "sleep", 0
             else:
                 anim, look = self._behave(dt, now, pointer)
 

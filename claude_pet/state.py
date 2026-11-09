@@ -26,6 +26,13 @@ class Session:
     claude_pid: int
     ts: float
     since: float
+    prompt_ts: float = 0.0
+    done_ts: float = 0.0
+
+    @property
+    def ack_key(self) -> float:
+        """Identifica "este terminou": o momento em que a conversa parou (cai pro ts em arquivos antigos)."""
+        return self.done_ts or self.ts
 
     @property
     def project(self) -> str:
@@ -44,7 +51,24 @@ class StateStore:
         self.dir = directory
         self.dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, tuple[float, dict]] = {}
-        self._acked: dict[str, float] = {}  # session_id → ts do evento "done" já visto
+        # session_id → ts do evento "done" já visto; fica em disco pra sobreviver a reinício do pet
+        self._acked_file = self.dir.parent / "acked.json"
+        self._acked: dict[str, float] = self._load_acked()
+
+    def _load_acked(self) -> dict[str, float]:
+        try:
+            data = json.loads(self._acked_file.read_text())
+            return {str(k): float(v) for k, v in data.items()}
+        except (OSError, ValueError, AttributeError, TypeError):
+            return {}
+
+    def _save_acked(self) -> None:
+        try:
+            tmp = self._acked_file.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._acked))
+            os.replace(tmp, self._acked_file)
+        except OSError:
+            pass
 
     # ---------- leitura ----------
     def _read_raw(self) -> list[dict]:
@@ -80,12 +104,18 @@ class StateStore:
     def _effective_status(self, d: dict, now: float) -> str:
         status = d.get("status", "idle")
         age = now - float(d.get("ts", 0))
+        if status == "thinking" and d.get("main_status") == "done" and now > float(d.get("waking_until") or 0):
+            status = "done"  # esperou o Claude ser acordado e ele não foi: terminou mesmo
         if status == "thinking" and age > self.cfg.thinking_timeout:
             return "idle"
+        # debounce: o Claude alterna ferramenta/pensamento a cada segundo; sem isso o pet fica pisca-pisca
+        if status == "thinking" and now - float(d.get("work_ts") or 0) < self.cfg.work_hold:
+            return "working"
         if status == "working" and age > self.cfg.tool_timeout:
             return "idle"
         if status == "done":
-            if age > self.cfg.done_linger or self._acked.get(d.get("session_id")) == d.get("ts"):
+            key = float(d.get("done_ts") or d.get("ts", 0))
+            if now - key > self.cfg.done_linger or self._acked.get(d.get("session_id")) == key:
                 return "idle"
         return status
 
@@ -107,7 +137,13 @@ class StateStore:
                 claude_pid=pid,
                 ts=float(d.get("ts", 0)),
                 since=float(d.get("since") or d.get("ts", 0)),
+                prompt_ts=float(d.get("prompt_ts") or 0),
+                done_ts=float(d.get("done_ts") or 0),
             ))
+        live = {s.session_id for s in result}
+        if any(sid not in live for sid in self._acked):  # sessões encerradas pelo SessionEnd
+            self._acked = {sid: ts for sid, ts in self._acked.items() if sid in live}
+            self._save_acked()
         result.sort(key=lambda s: (PRIORITY.get(s.status, 0), s.ts), reverse=True)
         return result
 
@@ -118,8 +154,9 @@ class StateStore:
     # ---------- ações ----------
     def acknowledge(self, session: Session) -> None:
         """Você viu o 'terminou': o bichinho volta a ficar ocioso para essa sessão."""
-        if session.status == "done":
-            self._acked[session.session_id] = session.ts
+        if session.status == "done" and self._acked.get(session.session_id) != session.ack_key:
+            self._acked[session.session_id] = session.ack_key
+            self._save_acked()
 
     def _remove(self, session_id: str) -> None:
         safe = "".join(c for c in session_id if c.isalnum() or c in "-_")[:80]
@@ -128,3 +165,5 @@ class StateStore:
                 (self.dir / f"{safe}.json").unlink()
             except OSError:
                 pass
+        if self._acked.pop(session_id, None) is not None:
+            self._save_acked()

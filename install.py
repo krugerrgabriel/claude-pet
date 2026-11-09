@@ -20,7 +20,7 @@ AUTOSTART = Path.home() / ".config" / "autostart" / "claude-pet.desktop"
 LAUNCHER = Path.home() / ".local" / "bin" / "claude-pet"
 
 EVENTS = ["SessionStart", "SessionEnd", "UserPromptSubmit", "PreToolUse", "PostToolUse",
-          "Notification", "Stop", "SubagentStop", "PreCompact"]
+          "PostToolUseFailure", "PermissionRequest", "Notification", "Stop", "SubagentStart", "SubagentStop", "PreCompact"]
 COMMAND = f'python3 "{HOOK}"'
 MARK = "claude_pet_hook.py"
 

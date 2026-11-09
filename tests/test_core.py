@@ -35,6 +35,103 @@ class HookAndStateTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         self.assertEqual(r.stdout, "")  # hook não pode falar no stdout (vira contexto do Claude)
 
+    def age_work(self, seconds=60):
+        """Finge que a última ferramenta começou há `seconds` (passa do debounce)."""
+        f = next((Path(self.tmp.name) / "sessions").glob("*.json"))
+        d = json.loads(f.read_text())
+        d["work_ts"] = time.time() - seconds
+        f.write_text(json.dumps(d))
+        os.utime(f, (time.time() + 1, time.time() + 1))
+
+    def raw(self):
+        return json.loads(next((Path(self.tmp.name) / "sessions").glob("*.json")).read_text())
+
+    def test_working_is_held_for_a_few_seconds(self):
+        self.fire("UserPromptSubmit")
+        self.fire("PreToolUse", tool_name="Read")
+        self.fire("PostToolUse", tool_name="Read")
+        self.assertEqual(self.status(), "working")
+        self.age_work(self.store.cfg.work_hold - 1)
+        self.assertEqual(self.status(), "working")
+        self.age_work(self.store.cfg.work_hold + 0.5)
+        self.assertEqual(self.status(), "thinking")
+        self.fire("Stop")                             # terminar não espera o debounce
+        self.assertEqual(self.status(), "done")
+
+    def test_background_subagents_do_not_flicker_done(self):
+        """Conversa dispara subagentes em segundo plano e para; só termina de verdade no fim."""
+        self.fire("UserPromptSubmit", prompt="faz X")
+        self.fire("PreToolUse", tool_name="Agent")
+        self.fire("PostToolUse", tool_name="Agent")
+        self.fire("SubagentStart", agent_id="a1", agent_type="fork")
+        self.fire("SubagentStart", agent_id="a2", agent_type="fork")
+        self.fire("Stop")                             # a conversa parou, mas os subagentes seguem
+        self.assertEqual(self.status(), "working")
+        self.fire("PreToolUse", agent_id="a1", tool_name="Bash")
+        self.fire("PostToolUse", agent_id="a1", tool_name="Bash")
+        self.fire("SubagentStop", agent_id="a1")
+        self.assertEqual(self.status(), "working")     # a2 ainda trabalhando
+        self.fire("UserPromptSubmit", prompt="<task-notification>a1 terminou</task-notification>")
+        self.fire("Stop")                             # revisou o a1 e parou de novo: ainda não terminou
+        self.assertEqual(self.status(), "working")
+        self.fire("SubagentStop", agent_id="a2")
+        self.assertNotEqual(self.status(), "done")     # vai ser acordado pelo aviso do a2
+        self.fire("UserPromptSubmit", prompt="<task-notification>a2 terminou</task-notification>")
+        self.fire("Stop")
+        self.assertEqual(self.status(), "done")        # agora sim
+        self.assertEqual(self.raw()["agents"], {})
+
+    def test_late_subagent_stop_does_not_leave_it_thinking(self):
+        """Corrida: o aviso do subagente chega e a conversa termina ANTES do SubagentStop dele."""
+        self.fire("UserPromptSubmit", prompt="faz X")
+        self.fire("SubagentStart", agent_id="a1")
+        self.fire("UserPromptSubmit", prompt='<agent-message from="a1">ok')
+        self.fire("Stop")
+        self.fire("SubagentStop", agent_id="a1")        # chega atrasado
+        self.assertEqual(self.status(), "thinking")     # por uns segundos espera o Claude ser acordado...
+        f = next((Path(self.tmp.name) / "sessions").glob("*.json"))
+        d = json.loads(f.read_text())
+        d["waking_until"] = time.time() - 1             # ...ninguém acordou
+        f.write_text(json.dumps(d))
+        os.utime(f, (time.time() + 1, time.time() + 1))
+        self.assertEqual(self.status(), "done")         # então terminou mesmo, não fica "pensando"
+
+    def test_seen_done_stays_seen_after_late_events(self):
+        self.fire("Stop")
+        self.store.acknowledge(self.store.top())
+        self.fire("SubagentStart", agent_id="a1")
+        self.fire("SubagentStop", agent_id="a1")
+        f = next((Path(self.tmp.name) / "sessions").glob("*.json"))
+        d = json.loads(f.read_text())
+        d["waking_until"] = time.time() - 1
+        f.write_text(json.dumps(d))
+        os.utime(f, (time.time() + 1, time.time() + 1))
+        self.assertEqual(self.status(), "idle")          # o "terminou" que você já viu não volta
+
+    def test_active_chat_still_shows_thinking_while_subagent_runs(self):
+        self.fire("UserPromptSubmit")
+        self.fire("SubagentStart", agent_id="a1")
+        self.fire("PreToolUse", agent_id="a1", tool_name="Bash")
+        self.age_work()
+        self.assertEqual(self.status(), "thinking")    # a conversa está pensando; o subagente não esconde isso
+
+    def test_subagent_permission_request_is_attention(self):
+        self.fire("UserPromptSubmit")
+        self.fire("SubagentStart", agent_id="a1")
+        self.fire("Notification", agent_id="a1", message="Claude needs your permission to use Bash",
+                  notification_type="permission_prompt")
+        self.assertEqual(self.status(), "attention")
+        self.fire("PreToolUse", agent_id="a1", tool_name="Bash")   # você aprovou
+        self.assertEqual(self.status(), "working")
+
+    def test_task_notification_is_not_your_prompt(self):
+        self.fire("UserPromptSubmit", prompt="oi")
+        ts = self.raw()["prompt_ts"]
+        self.fire("Stop")
+        self.fire("UserPromptSubmit", prompt="<task-notification>\n<task-id>x</task-id>")
+        self.fire("UserPromptSubmit", prompt='<agent-message from="a1">\n[Subagent hand-back]')
+        self.assertEqual(self.raw()["prompt_ts"], ts)   # não acorda o pet do "botar pra dormir"
+
     def status(self):
         top = self.store.top()
         return top.status if top else None
@@ -48,6 +145,8 @@ class HookAndStateTest(unittest.TestCase):
         top = self.store.top()
         self.assertEqual((top.status, top.tool, top.project), ("working", "Bash", "meu-projeto"))
         self.fire("PostToolUse", tool_name="Bash")
+        self.assertEqual(self.status(), "working")   # debounce: segura "trabalhando" logo depois da ferramenta
+        self.age_work()
         self.assertEqual(self.status(), "thinking")
         self.fire("Notification", message="Claude needs your permission", notification_type="permission_prompt")
         self.assertEqual(self.status(), "attention")
@@ -81,6 +180,31 @@ class HookAndStateTest(unittest.TestCase):
         f.write_text(json.dumps(d))
         os.utime(f, (time.time() + 1, time.time() + 1))
         self.assertEqual(self.status(), "idle")
+
+    def test_prompt_ts_only_moves_on_prompt(self):
+        self.fire("SessionStart")
+        self.assertEqual(self.store.top().prompt_ts, 0)
+        self.fire("UserPromptSubmit")
+        ts = self.store.top().prompt_ts
+        self.assertGreater(ts, 0)
+        self.fire("PreToolUse", tool_name="Bash")
+        self.fire("Stop")
+        self.assertEqual(self.store.top().prompt_ts, ts)
+
+    def test_ack_survives_pet_restart(self):
+        self.fire("Stop")
+        self.store.acknowledge(self.store.top())
+        fresh = StateStore(Config(), Path(self.tmp.name) / "sessions")
+        self.assertEqual(fresh.top().status, "idle")
+        self.fire("Stop")  # terminou de novo: aparece outra vez
+        self.assertEqual(fresh.top().status, "done")
+
+    def test_ack_is_pruned_after_session_end(self):
+        self.fire("Stop")
+        self.store.acknowledge(self.store.top())
+        self.fire("SessionEnd")
+        self.store.sessions()
+        self.assertEqual(json.loads((Path(self.tmp.name) / "acked.json").read_text()), {})
 
 
 class PetTest(unittest.TestCase):
@@ -123,22 +247,28 @@ class PetTest(unittest.TestCase):
         self.assertEqual(pet.mode, "free")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class SkinTest(unittest.TestCase):
     def test_every_skin_has_every_animation(self):
         from claude_pet import skins
-        from claude_pet.sprites import ANIMATIONS
         import cairo
         for name in skins.available():
             skin = skins.load(name)
-            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, skin.canvas * 2, skin.canvas * 2)
-            for anim in ANIMATIONS:
+            self.assertEqual(skin.canvas, 30, name)  # todos no mesmo canvas: paredes/teto/balão dependem disso
+            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, skin.canvas * 3, skin.canvas * 3)
+            for anim in skins.ANIM_NAMES:
                 _fps, n = skin.anim_info(anim)
+                self.assertGreater(n, 0, (name, anim))
                 for i in range(n):
-                    skin.draw(cairo.Context(surf), anim, i, -1, "attention", 2, "#5ec4b6")
+                    for facing in (1, -1):
+                        for look in (-1, 0, 1):
+                            skin.draw(cairo.Context(surf), anim, i, look, "attention", 3, "#5ec4b6",
+                                      0.3 if anim == "dangle" else 0.0, facing)
+
+    def test_unknown_skin_falls_back_to_robot(self):
+        from claude_pet import skins
+        self.assertEqual(skins.load("dragao").name, skins.ROBOT)
+        self.assertEqual(skins.available()[0], skins.ROBOT)
 
 
 class SwingTest(unittest.TestCase):
@@ -186,3 +316,35 @@ class DragStopTest(unittest.TestCase):
             self.assertEqual((pet.vx, pet.vy), (0.0, 0.0))
         finally:
             C.time.monotonic = orig
+
+
+class ForcedSleepTest(unittest.TestCase):
+    def test_sleeps_through_activity_until_woken(self):
+        pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        pet.mode, pet.s = "edge", pet.seg[0] + 200   # na parede
+        pet.sleep_now()
+        for _ in range(200):
+            f = pet.tick(1 / 30, "idle", (pet.position()[0] + 30, pet.position()[1] + 30))
+        self.assertTrue(pet.on_floor)                # desceu da parede
+        self.assertEqual((f.anim, f.status), ("sleep", "sleep"))
+        pet.cheer()
+        f = pet.tick(1 / 30, "done", None)
+        self.assertEqual(f.anim, "sleep")            # nem comemorando acorda
+        pet.wake()
+        f = pet.tick(1 / 30, "thinking", None)
+        self.assertNotEqual(f.anim, "sleep")
+
+
+class CrossesTest(unittest.TestCase):
+    def test_fast_pass_over_rect_counts(self):
+        from claude_pet.window import _crosses
+        rect = (100, 100, 60, 60)
+        self.assertTrue(_crosses((0, 130), (400, 130), rect))      # atravessou entre dois ticks
+        self.assertFalse(_crosses((0, 0), (400, 0), rect))
+        self.assertTrue(_crosses(None, (120, 120), rect))
+        self.assertFalse(_crosses((0, 0), None, rect))
+        self.assertFalse(_crosses((0, 0), (120, 120), None))
+
+
+if __name__ == "__main__":
+    unittest.main()

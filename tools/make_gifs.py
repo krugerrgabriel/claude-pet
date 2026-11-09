@@ -23,14 +23,15 @@ STATES = [  # (arquivo, animação, status da antena, segundos)
 SKIN = skins.load()
 
 
-def frames(anim, status, seconds, lean_wave=False):
-    anim_fps, n = SKIN.anim_info(anim)
+def frames(anim, status, seconds, lean_wave=False, skin=None):
+    skin = skin or SKIN
+    anim_fps, n = skin.anim_info(anim)
     fps = anim_fps
     total = max(n, round(seconds * fps))
     if lean_wave:  # balanço de pêndulo: mais quadros e mais rápido, sempre inclinado
         total, fps = 24, 12
     out = []
-    size = SKIN.canvas * SCALE
+    size = skin.canvas * SCALE
     for i in range(total):
         surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
         cr = cairo.Context(surf)
@@ -41,7 +42,7 @@ def frames(anim, status, seconds, lean_wave=False):
             import math
             lean = 0.4 * math.sin(i / total * 2 * math.pi + math.pi / 2)
         anim_frame = int(i * anim_fps / fps)  # o quadro da animação segue o ritmo real dela
-        SKIN.draw(cr, anim, anim_frame, 1, status, SCALE, "#5ec4b6", lean)
+        skin.draw(cr, anim, anim_frame, 1, status, SCALE, "#5ec4b6", lean)
         img = Image.frombuffer("RGBA", (size, size), bytes(surf.get_data()), "raw", "BGRA", 0, 1).convert("RGB")
         out.append(img)
     return out, int(1000 / fps)
@@ -67,4 +68,17 @@ if __name__ == "__main__":
             canvas.paste(seq[(k * len(seq)) // n], (j * size, 0))
         strip_frames.append(canvas)
     save(ROOT / "docs" / "hero.gif", strip_frames, 125)
+
+    # personagens: mesma tira de 5 estados, um GIF por bichinho
+    (ROOT / "docs" / "chars").mkdir(exist_ok=True)
+    for name in skins.available():
+        skin = skins.load(name)
+        seqs = [frames(a, st, 3.0, skin=skin)[0] for _, a, st, _ in main]
+        out = []
+        for k in range(n):
+            canvas = Image.new("RGB", (size * len(seqs), size), BG)
+            for j, seq in enumerate(seqs):
+                canvas.paste(seq[(k * len(seq)) // n], (j * size, 0))
+            out.append(canvas)
+        save(ROOT / "docs" / "chars" / f"{name}.gif", out, 125)
     print("ok")

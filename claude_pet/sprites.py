@@ -6,19 +6,10 @@ Cada pose é um dict; as animações são listas de poses.
 """
 from __future__ import annotations
 
-import colorsys
+from .pixel import CANVAS, STATUS_COLORS, Pen, hex_rgb, shade
+from .pixel import overlay as _draw_overlay
 
-CANVAS = 30
 OX, OY = 5, 7  # deslocamento do sprite (20x23) dentro do canvas: pés em y=29
-
-STATUS_COLORS = {
-    "idle": "#6fcf97",
-    "thinking": "#56ccf2",
-    "working": "#f2c94c",
-    "attention": "#eb5757",
-    "done": "#2ecc71",
-    "sleep": "#466b60",
-}
 
 OUTLINE = "#1d2b3a"
 SCREEN = "#0f1a24"
@@ -27,18 +18,6 @@ LEG = "#2a3d4a"
 HAND = "#d8f3ee"
 LAPTOP = "#aab4be"
 LAPTOP_DARK = "#3b4652"
-
-
-def hex_rgb(h: str) -> tuple[float, float, float]:
-    h = h.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))  # type: ignore[return-value]
-
-
-def shade(h: str, factor: float) -> str:
-    r, g, b = hex_rgb(h)
-    hh, ll, ss = colorsys.rgb_to_hls(r, g, b)
-    r, g, b = colorsys.hls_to_rgb(hh, max(0, min(1, ll * factor)), ss)
-    return "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
 
 
 def mirror(rect):
@@ -67,16 +46,6 @@ LEGS = {
     "sit": ([], [(4, 21, 3, 2)]),
     "dangle": ([(7, 19, 2, 3)], [(7, 22, 2, 1)]),
 }
-
-GLYPHS = {
-    "z": ["###", "..#", ".#.", "#..", "###"],
-    "bang": ["##", "##", "##", "##", "..", "##"],
-    "heart": [".#.#.", "#####", "#####", ".###.", "..#.."],
-    "spark": [".#.", "###", ".#."],
-    "check": ["....#", "...#.", "#.#..", ".#..."],
-    "dot": ["##", "##"],
-}
-
 
 def _side_parts(arms: str, side: str):
     """Retorna (retângulos do braço, mão) de um lado; o direito é espelhado do esquerdo."""
@@ -230,57 +199,7 @@ def render(cr, pose: dict, scale: int, body_color: str) -> None:
         hx, hy, hw, hh = hand
         px(hx, hy + arm_up, hw, hh, HAND)
 
-    _overlay(px, pose.get("overlay"), pose.get("oframe", 0))
-
-
-def _thought_robot(px, f):
-    from .skins import THOUGHT_CLOUD, THOUGHT_COLORS
-    x, y = 17, 0
-    step = f % 4
-    px(x - 1, y + 8, 1, 1, THOUGHT_COLORS["W"], ox=0, oy=0)
-    if step >= 1:
-        px(x, y + 6, 2, 2, THOUGHT_COLORS["W"], ox=0, oy=0)
-    for j, row in enumerate(THOUGHT_CLOUD):
-        for i, c in enumerate(row):
-            if c != ".":
-                px(x + i, y + j, 1, 1, THOUGHT_COLORS[c], ox=0, oy=0)
-    for k in range(min(3, step + 1)):
-        px(x + 3 + k * 3, y + 3, 1, 1, THOUGHT_COLORS["d"], ox=0, oy=0)
-
-
-def _glyph(px, name, x, y, color):
-    for j, row in enumerate(GLYPHS[name]):
-        for i, ch in enumerate(row):
-            if ch == "#":
-                px(x + i, y + j, 1, 1, color, ox=0, oy=0)
-
-
-def _overlay(px, overlay, f):
-    if not overlay:
-        return
-    if overlay == "thought":
-        return _thought_robot(px, f)
-    if overlay == "zzz":
-        for k in range(3):
-            step = (f + k) % 4
-            if step < 3:
-                _glyph(px, "z", 20 + k * 3, 6 - step * 2 - k, "#c9d6df")
-    elif overlay == "dots":
-        for k in range(f % 4):
-            _glyph(px, "dot", 19 + k * 3, 4 - k, "#e0f7fa")
-    elif overlay == "bang":
-        if f % 2 == 0:
-            _glyph(px, "bang", 24, 0, STATUS_COLORS["attention"])
-    elif overlay == "sparkle":
-        spots = [(1, 6), (26, 9), (23, 1), (4, 1), (27, 3)]
-        for k, (x, y) in enumerate(spots):
-            if (k + f) % 2 == 0:
-                _glyph(px, "spark", x, y, "#ffe66d")
-    elif overlay == "heart":
-        _glyph(px, "heart", 22, 4 - (f % 4), "#ff6b9a")
-    elif overlay == "check":
-        if f % 3 != 2:
-            _glyph(px, "check", 23, 2, STATUS_COLORS["done"])
+    _draw_overlay(Pen(cr, scale), pose.get("overlay"), pose.get("oframe", 0))
 
 
 # ---------------------------------------------------------------- animações
