@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import math
 import os
-import re
 import sys
 import time
 
@@ -15,7 +14,8 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
-from . import bubble, focus, skins  # noqa: E402
+from . import bubble, focus, i18n, skins  # noqa: E402
+from .i18n import t  # noqa: E402
 from .character import Frame, Pet, Rect  # noqa: E402
 from .config import Config  # noqa: E402
 from .sprites import STATUS_COLORS  # noqa: E402
@@ -23,28 +23,8 @@ from .state import Session, StateStore  # noqa: E402
 
 DEBUG = bool(os.environ.get("CLAUDE_PET_DEBUG"))
 
-STATUS_LABEL = {
-    "idle": "de boa",
-    "thinking": "pensando…",
-    "working": "trabalhando",
-    "attention": "precisando de você",
-    "done": "terminou",
-}
-
-
-_PERMISSAO = re.compile(r"Claude needs your permission to use (.+)", re.I)
-
-
-def _traduz(msg: str) -> str:
-    """Mensagens do Claude Code vêm em inglês; traduz as comuns."""
-    if not msg:
-        return ""
-    m = _PERMISSAO.search(msg)
-    if m:
-        return f"Quer permissão para usar {m.group(1)}"
-    if "waiting for your input" in msg.lower():
-        return "Esperando sua resposta"
-    return msg
+def _status(st: str) -> str:
+    return t(f"status.{st}") if f"status.{st}" in i18n.STRINGS else st
 
 
 def _crosses(p0, p1, rect) -> bool:
@@ -317,28 +297,28 @@ class PetWindow(Gtk.Window):
         hovering = pointer is not None and self.pet.contains(*pointer)
 
         if top and top.status == "attention":
-            msg = _traduz(top.message)
-            return f"{msg or 'Claude Code precisa de você'}{extra}.\nClique em mim para abrir"
+            msg = i18n.claude_message(top.message)
+            return f"{msg or t('bubble.needs_you')}{extra}.\n{t('bubble.click')}"
         if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
-            return f"Claude Code terminou{extra}.\nClique em mim para abrir"
+            return f"{t('bubble.done')}{extra}.\n{t('bubble.click')}"
         if not hovering or self.pressed or self._quiet_hover:
             return ""
         name = self.cfg.display_name
         if self.pet.forced_sleep:
-            return f"{name} está dormindo até o próximo prompt"
+            return t("bubble.sleeping", name=name)
         if not self.sessions:
-            return f"{name}: nenhuma sessão aberta"
+            return t("bubble.no_sessions", name=name)
         if len(self.sessions) == 1:
             sess = self.sessions[0]
-            detail = STATUS_LABEL.get(sess.status, sess.status)
+            detail = _status(sess.status)
             if sess.status == "working" and sess.tool:
                 detail = f"{detail} ({sess.tool})"
-            return f"{name} está {detail}"
+            return t("bubble.one", name=name, status=detail)
         counts: dict[str, int] = {}
         for sess in self.sessions:  # já vêm do mais urgente pro menos
             counts[sess.status] = counts.get(sess.status, 0) + 1
-        return f"{name}: " + ", ".join(f"{n} {'chat' if n == 1 else 'chats'} {STATUS_LABEL.get(st, st)}"
-                                     for st, n in counts.items())
+        return f"{name}: " + ", ".join(t("bubble.chats_one" if n == 1 else "bubble.chats_many", n=n,
+                                         status=_status(st)) for st, n in counts.items())
 
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
@@ -383,31 +363,32 @@ class PetWindow(Gtk.Window):
         menu = Gtk.Menu()
         if self.sessions:
             for s in self.sessions[:8]:
-                item = Gtk.MenuItem(label=f"{s.project}: {STATUS_LABEL.get(s.status, s.status)}")
+                item = Gtk.MenuItem(label=f"{s.project}: {_status(s.status)}")
                 item.connect("activate", lambda _i, sess=s: (focus.focus_session(sess.claude_pid, sess.project),
                                                               self.store.acknowledge(sess)))
                 menu.append(item)
         else:
-            item = Gtk.MenuItem(label="Nenhuma sessão aberta")
+            item = Gtk.MenuItem(label=t("menu.no_sessions"))
             item.set_sensitive(False)
             menu.append(item)
         menu.append(Gtk.SeparatorMenuItem())
         menu.append(self._skin_menu())
-        rename = Gtk.MenuItem(label="Mudar nome…")
+        rename = Gtk.MenuItem(label=t("menu.rename"))
         rename.connect("activate", lambda _i: self._rename())
         menu.append(rename)
+        menu.append(self._language_menu())
         if self.pet.forced_sleep:
-            item = Gtk.MenuItem(label="Acordar")
+            item = Gtk.MenuItem(label=t("menu.wake"))
             item.connect("activate", lambda _i: self._wake())
         else:
-            item = Gtk.MenuItem(label="Botar pra dormir")
+            item = Gtk.MenuItem(label=t("menu.sleep"))
             item.connect("activate", lambda _i: self._sleep())
         menu.append(item)
-        for label, minutes in (("Esconder por 30 min", 30), ("Esconder por 2 h", 120)):
+        for label, minutes in ((t("menu.hide_30"), 30), (t("menu.hide_2h"), 120)):
             item = Gtk.MenuItem(label=label)
             item.connect("activate", lambda _i, m=minutes: self._hide_for(m))
             menu.append(item)
-        quit_item = Gtk.MenuItem(label="Sair")
+        quit_item = Gtk.MenuItem(label=t("menu.quit"))
         quit_item.connect("activate", lambda _i: Gtk.main_quit())
         menu.append(quit_item)
         menu.show_all()
@@ -415,8 +396,8 @@ class PetWindow(Gtk.Window):
 
     def _rename(self) -> None:
         """Janelinha pra escolher o nome do pet. Vazio = "Seu pet"."""
-        dlg = Gtk.Dialog(title="Nome do pet")
-        dlg.add_buttons("Cancelar", Gtk.ResponseType.CANCEL, "Salvar", Gtk.ResponseType.OK)
+        dlg = Gtk.Dialog(title=t("rename.title"))
+        dlg.add_buttons(t("rename.cancel"), Gtk.ResponseType.CANCEL, t("rename.save"), Gtk.ResponseType.OK)
         dlg.set_default_response(Gtk.ResponseType.OK)
         dlg.set_keep_above(True)
         dlg.set_position(Gtk.WindowPosition.MOUSE)
@@ -424,8 +405,8 @@ class PetWindow(Gtk.Window):
         box = dlg.get_content_area()
         box.set_border_width(12)
         box.set_spacing(8)
-        box.add(Gtk.Label(label="Como seu pet se chama?", xalign=0))
-        entry = Gtk.Entry(text=self.cfg.pet_name or "", placeholder_text="Seu pet", max_length=24,
+        box.add(Gtk.Label(label=t("rename.question"), xalign=0))
+        entry = Gtk.Entry(text=self.cfg.pet_name or "", placeholder_text=t("default_name"), max_length=24,
                           activates_default=True)
         box.add(entry)
         dlg.show_all()
@@ -444,9 +425,28 @@ class PetWindow(Gtk.Window):
             item.set_active(name == self.skin.name)
             item.connect("toggled", lambda i, n=name: i.get_active() and self._set_skin(n))
             sub.append(item)
-        root = Gtk.MenuItem(label="Personagem")
+        root = Gtk.MenuItem(label=t("menu.character"))
         root.set_submenu(sub)
         return root
+
+    def _language_menu(self) -> Gtk.MenuItem:
+        sub = Gtk.Menu()
+        group = None
+        options = [("auto", t("menu.lang_auto"))] + [(code, i18n.LANGUAGE_NAMES[code]) for code in i18n.LANGUAGES]
+        chosen = (self.cfg.language or "auto").lower()
+        for code, label in options:
+            item = Gtk.RadioMenuItem.new_with_label_from_widget(group, label)
+            group = group or item
+            item.set_active(code == chosen)
+            item.connect("toggled", lambda i, c=code: i.get_active() and self._set_language(c))
+            sub.append(item)
+        root = Gtk.MenuItem(label=t("menu.language"))
+        root.set_submenu(sub)
+        return root
+
+    def _set_language(self, code: str) -> None:
+        self.cfg.save_key("language", code)
+        i18n.set_language(code)   # balão e menu já saem no idioma novo
 
     def _set_skin(self, name: str) -> None:
         if name == self.skin.name:

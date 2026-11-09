@@ -118,7 +118,7 @@ Pronto. 🎉 Abra uma sessão nova do Claude Code e veja ele em ação.
 | **Passar o mouse** (mesmo rapidinho) pelo bichinho ou pelo balão, quando terminou | Dispensa o balão de "terminou" e o ✓ (um clique logo depois ainda abre o terminal) |
 | **Deixar o mouse parado em cima** | Carinho ❤ |
 | **Arrastar e soltar** | Pega ele, balança, arremessa |
-| **Botão direito** | Lista de chats (clique pra focar), **Personagem**, **Mudar nome…**, **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
+| **Botão direito** | Lista de chats (clique pra focar), **Personagem**, **Mudar nome…**, **Idioma** (automático, português ou inglês), **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
 
 ---
 
@@ -133,6 +133,7 @@ Só se quiser: tudo funciona sem configurar nada.
 {
   "skin": "robo",
   "pet_name": "",
+  "language": "auto",
   "scale": 3,
   "body_color": "#5ec4b6",
   "walk_speed": 45,
@@ -147,6 +148,7 @@ Só se quiser: tudo funciona sem configurar nada.
 |---|---|
 | `skin` | Personagem: `robo`, `lagartixa`, `gosminha` ou `capivara` (o menu grava aqui) |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
+| `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
 | `body_color` | Qualquer cor pro corpo do Bit (só o robô) |
 | `walk_speed` | Pixels por segundo |

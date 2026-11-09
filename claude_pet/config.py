@@ -13,14 +13,14 @@ from pathlib import Path
 CACHE_DIR = Path(os.environ.get("CLAUDE_PET_HOME", Path.home() / ".cache" / "claude-pet"))
 SESSIONS_DIR = CACHE_DIR / "sessions"
 LOCK_FILE = CACHE_DIR / "pet.lock"
-DEFAULT_NAME = "Seu pet"
 CONFIG_FILE = Path(os.environ.get("CLAUDE_PET_CONFIG", Path.home() / ".config" / "claude-pet" / "config.json"))
 
 
 @dataclass
 class Config:
     # Visual
-    pet_name: str = ""             # vazio = "Seu pet"; muda pelo menu "Mudar nome…"
+    pet_name: str = ""             # vazio = "Seu pet" / "Your pet"; muda pelo menu "Mudar nome…"
+    language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
     skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
@@ -48,7 +48,8 @@ class Config:
 
     @property
     def display_name(self) -> str:
-        return (self.pet_name or "").strip() or DEFAULT_NAME
+        from .i18n import t
+        return (self.pet_name or "").strip() or t("default_name")
 
     def save_key(self, key: str, value) -> None:
         """Grava uma chave no config.json preservando as outras."""

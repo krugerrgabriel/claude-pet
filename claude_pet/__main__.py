@@ -21,6 +21,8 @@ def main() -> int:
     from gi.repository import GLib, Gtk
 
     cfg = Config.load()
+    from . import i18n
+    i18n.set_language(cfg.language)
     win = PetWindow(cfg, StateStore(cfg))
     win.show_all()
     GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, Gtk.main_quit)

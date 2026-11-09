@@ -346,5 +346,49 @@ class CrossesTest(unittest.TestCase):
         self.assertFalse(_crosses((0, 0), (120, 120), None))
 
 
+class I18nTest(unittest.TestCase):
+    def tearDown(self):
+        from claude_pet import i18n
+        i18n.set_language("pt")
+
+    def test_detects_system_language_like_gtk(self):
+        from claude_pet.i18n import system_language
+        gabriel = {"LANGUAGE": "en_US:en", "LANG": "en_US.UTF-8", "LC_TIME": "pt_BR.UTF-8"}
+        self.assertEqual(system_language(gabriel), "en")        # região pt_BR não é idioma
+        self.assertEqual(system_language({"LANG": "pt_BR.UTF-8"}), "pt")
+        self.assertEqual(system_language({"LANGUAGE": "pt_PT:pt", "LANG": "en_US.UTF-8"}), "pt")
+        self.assertEqual(system_language({"LC_ALL": "C", "LANG": "pt_BR.UTF-8"}), "pt")  # C não decide
+        self.assertEqual(system_language({"LANG": "de_DE.UTF-8"}), "en")  # sem tradução: inglês
+        self.assertEqual(system_language({}), "en")
+
+    def test_explicit_choice_beats_system(self):
+        from claude_pet.i18n import resolve
+        self.assertEqual(resolve("pt", {"LANG": "en_US.UTF-8"}), "pt")
+        self.assertEqual(resolve("auto", {"LANG": "pt_BR.UTF-8"}), "pt")
+        self.assertEqual(resolve("klingon", {"LANG": "en_US.UTF-8"}), "en")
+
+    def test_every_text_exists_in_every_language(self):
+        from claude_pet.i18n import LANGUAGES, STRINGS
+        import re as _re
+        for key, entry in STRINGS.items():
+            for lang in LANGUAGES:
+                self.assertTrue(entry.get(lang), (key, lang))
+            fields = {lang: set(_re.findall(r"{(\w+)}", entry[lang])) for lang in LANGUAGES}
+            self.assertEqual(fields["pt"], fields["en"], key)   # mesmos {campos} nas duas
+
+    def test_texts_switch_with_language(self):
+        from claude_pet import i18n, skins
+        i18n.set_language("en")
+        self.assertEqual(Config().display_name, "Your pet")
+        self.assertEqual(i18n.t("bubble.one", name="Rex", status=i18n.t("status.idle")), "Rex is chilling")
+        self.assertEqual(skins.label("capivara"), "Capybara")
+        msg = "Claude needs your permission to use Bash"
+        self.assertEqual(i18n.claude_message(msg), msg)          # em inglês, mostra como veio
+        i18n.set_language("pt")
+        self.assertEqual(Config().display_name, "Seu pet")
+        self.assertEqual(i18n.claude_message(msg), "Quer permissão para usar Bash")
+        self.assertEqual(skins.label("capivara"), "Capivara")
+
+
 if __name__ == "__main__":
     unittest.main()

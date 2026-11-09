@@ -49,7 +49,7 @@ You send a prompt, Claude Code starts working, and you go do something else. The
 
 ### 🐾 Pick your pet
 
-Not into robots? Right click → **Personagem** (character). Every character does everything Bit does (walking on the ceiling, thinking, typing, asking for you, celebrating, sleeping, swinging when dragged) and shows the status through the color of one detail:
+Not into robots? Right click → **Character**. Every character does everything Bit does (walking on the ceiling, thinking, typing, asking for you, celebrating, sleeping, swinging when dragged) and shows the status through the color of one detail:
 
 | | Character | Where the status "light" is |
 |---|---|---|
@@ -118,7 +118,7 @@ Done. 🎉 Open a new Claude Code session and watch him go.
 | **Hover** (even a quick pass) over the pet or the bubble, when done | Dismisses the "done" bubble and the ✓ (a click right after still opens the terminal) |
 | **Hover and wait** | Petting ❤ |
 | **Drag and release** | Pick him up, swing him around, throw him |
-| **Right click** | List of chats (click one to focus it), **character**, **rename**, **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
+| **Right click** | List of chats (click one to focus it), **character**, **rename**, **language** (automatic, Portuguese or English), **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
 
 ---
 
@@ -133,6 +133,7 @@ Only if you want to: everything works out of the box.
 {
   "skin": "robo",
   "pet_name": "",
+  "language": "auto",
   "scale": 3,
   "body_color": "#5ec4b6",
   "walk_speed": 45,
@@ -146,7 +147,8 @@ Only if you want to: everything works out of the box.
 | Key | Meaning |
 |---|---|
 | `skin` | Character: `robo`, `lagartixa`, `gosminha` or `capivara` (the menu saves it here) |
-| `pet_name` | Name used in the bubbles (empty = "Seu pet"; the **Mudar nome…** menu item saves it here) |
+| `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
+| `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
 | `body_color` | Any color for Bit's body (robot only) |
 | `walk_speed` | Pixels per second |

@@ -42,7 +42,10 @@ def available() -> list[str]:
 
 
 def label(name: str) -> str:
-    return "Robô" if name == ROBOT else importlib.import_module(f".chars.{name}", __package__).LABEL
+    from .i18n import STRINGS, t
+    if f"char.{name}" in STRINGS:
+        return t(f"char.{name}")
+    return importlib.import_module(f".chars.{name}", __package__).LABEL
 
 
 def load(name: str = ROBOT) -> "Skin":
