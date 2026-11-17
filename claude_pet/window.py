@@ -121,7 +121,7 @@ class PetWindow(Gtk.Window):
         self.resize(self.size, self.size)
 
         self.display = Gdk.Display.get_default()
-        self.pet = Pet(cfg, self._primary_area(), self._area_at, skin=self.skin)
+        self.pet = Pet(cfg, self._primary_area(), self._area_at, skin=self.skin, neighbor=self._neighbor)
         self.bubble = Bubble()
 
         self.frame: Frame | None = None
@@ -163,6 +163,24 @@ class PetWindow(Gtk.Window):
     def _area_at(self, x: float, y: float) -> Rect:
         mon = self.display.get_monitor_at_point(int(x), int(y))
         return self._monitor_rect(mon) if mon else self._primary_area()
+
+    def _neighbor(self, area: Rect, side: int, y: float) -> Rect | None:
+        """Monitor encostado do lado `side` (-1 esquerda, +1 direita) do monitor dessa área, na altura y.
+
+        Olha além da borda física do monitor (não da área de trabalho): um dock na beirada entre dois
+        monitores não vira parede. O get_monitor_at_point devolve o mais próximo, por isso a busca manual.
+        """
+        mons = [self.display.get_monitor(i) for i in range(self.display.get_n_monitors())]
+        here = next((m for m in mons if self._monitor_rect(m) == area), None)
+        if here is None:
+            return None
+        g = here.get_geometry()
+        px = g.x - 1 if side < 0 else g.x + g.width
+        for mon in mons:
+            o = mon.get_geometry()
+            if mon is not here and o.x <= px < o.x + o.width and o.y <= y < o.y + o.height:
+                return self._monitor_rect(mon)
+        return None
 
     def _pointer(self) -> tuple[float, float] | None:
         seat = self.display.get_default_seat()

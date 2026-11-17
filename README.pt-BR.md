@@ -57,6 +57,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | <img src="docs/chars/lagartixa.gif" width="300"> | **Lagartixa**, a que mais combina com andar na parede | Pintinhas nas costas |
 | <img src="docs/chars/gosminha.gif" width="300"> | **Gosminha**, pulinhos de gelatina | Bolhinha dentro da gosma |
 | <img src="docs/chars/capivara.gif" width="300"> | **Capivara**, zen até o Claude precisar de você | Frutinha na cabeça |
+| <img src="docs/chars/pato.gif" width="300"> | **Patinho**, gingando de cachecol | Cachecol no pescoço |
 
 ---
 
@@ -69,7 +70,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | 💬 **Balões de fala** | Balõezinhos em pixel art: *"Claude Code terminou. Clique em mim para abrir"* |
 | 🧮 **Vários chats** | Mostra o mais urgente; passando o mouse, um resumo em uma linha (*"Bit: 1 chat trabalhando, 2 chats de boa"*) |
 | 🧗 **Anda por tudo** | Chão, paredes e teto do monitor, respeitando a dock e a barra do topo |
-| 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura |
+| 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura. Jogado contra a borda que encosta em outro monitor, atravessa pra ele |
 | 💤 **Humores** | Repara no seu cursor, gosta de carinho ❤, dorme quando nada está acontecendo |
 | 👻 **Nunca atrapalha** | O clique atravessa tudo menos o próprio Bit. Dá pra esconder por 30 min ou 2 h no menu |
 | 🧹 **Se limpa sozinho** | Sessões cujo processo `claude` morreu são esquecidas automaticamente |
@@ -127,7 +128,7 @@ Pronto. 🎉 Abra uma sessão nova do Claude Code e veja ele em ação.
 | **Passar o mouse** | Status em uma linha: *"Bit está trabalhando (Bash)"* |
 | **Passar o mouse** (mesmo rapidinho) pelo bichinho ou pelo balão, quando terminou | Dispensa o balão de "terminou" e o ✓ (um clique logo depois ainda abre o terminal) |
 | **Deixar o mouse parado em cima** | Carinho ❤ |
-| **Arrastar e soltar** | Pega ele, balança, arremessa |
+| **Arrastar e soltar** | Pega ele, balança, arremessa (até pro outro monitor) |
 | **Botão direito** | Lista de chats (clique pra focar), **Personagem**, **Mudar nome…**, **Idioma** (automático, português ou inglês), **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
 
 ---
@@ -156,7 +157,7 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `skin` | Personagem: `robo`, `lagartixa`, `gosminha` ou `capivara` (o menu grava aqui) |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara` ou `pato` (o menu grava aqui) |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
 | `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
@@ -228,7 +229,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 ```
 claude-pet/
 ├── claude_pet/          ← o pet (python3 -m claude_pet)
-│   └── chars/           ← lagartixa, gosminha, capivara (um arquivo cada)
+│   └── chars/           ← lagartixa, gosminha, capivara, pato (um arquivo cada)
 ├── hooks/               ← o hook do Claude Code
 ├── tests/               ← hook → estado → comportamento
 ├── tools/               ← prévias dos sprites, página de revisão, GIFs do README

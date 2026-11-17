@@ -335,6 +335,51 @@ class ForcedSleepTest(unittest.TestCase):
         self.assertNotEqual(f.anim, "sleep")
 
 
+class MultiMonitorTest(unittest.TestCase):
+    """Dois monitores lado a lado: arremessado na borda que encosta no outro, atravessa; na borda de fora, volta."""
+    LEFT, RIGHT = Rect(0, 0, 1920, 1080), Rect(1920, 0, 1920, 1080)
+
+    def _at(self, x, y):
+        for r in (self.LEFT, self.RIGHT):
+            if r.x <= x < r.x + r.w and r.y <= y < r.y + r.h:
+                return r
+        return None
+
+    def make(self, x, vx):
+        def neighbor(area, side, y):
+            other = self._at(area.x - 1 if side < 0 else area.x + area.w, y)
+            return other if other != area else None
+        pet = Pet(Config(), self.LEFT, lambda x, y: self._at(x, y) or self.LEFT, rng=random.Random(1),
+                  neighbor=neighbor)
+        pet.mode, pet.x, pet.y, pet.vx, pet.vy = "free", x, 300.0, vx, -300.0
+        return pet
+
+    def _fly(self, pet):
+        for _ in range(200):
+            pet.tick(0.016, "idle", None)
+            if pet.mode == "edge":
+                break
+
+    def test_thrown_into_shared_edge_crosses(self):
+        pet = self.make(1800.0, 1500.0)
+        self._fly(pet)
+        self.assertGreaterEqual(pet.position()[0], 1920)
+        self.assertEqual(pet.area, self.RIGHT)
+
+    def test_crosses_back_to_the_left(self):
+        pet = self.make(1980.0, -1500.0)
+        pet.area = self.RIGHT
+        self._fly(pet)
+        self.assertLess(pet.position()[0], 1920)
+        self.assertEqual(pet.area, self.LEFT)
+
+    def test_outer_edge_still_bounces(self):
+        pet = self.make(100.0, -1500.0)
+        self._fly(pet)
+        self.assertGreaterEqual(pet.position()[0], 0)
+        self.assertEqual(pet.area, self.LEFT)
+
+
 class CrossesTest(unittest.TestCase):
     def test_fast_pass_over_rect_counts(self):
         from claude_pet.window import _crosses

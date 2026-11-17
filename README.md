@@ -57,6 +57,7 @@ Not into robots? Right click → **Character**. Every character does everything 
 | <img src="docs/chars/lagartixa.gif" width="300"> | **Lagartixa** (gecko), born to walk on walls | Spots on its back |
 | <img src="docs/chars/gosminha.gif" width="300"> | **Gosminha** (slime), jelly hops | Bubble inside the goo |
 | <img src="docs/chars/capivara.gif" width="300"> | **Capivara** (capybara), zen until Claude needs you | Fruit on its head |
+| <img src="docs/chars/pato.gif" width="300"> | **Patinho** (duckling), waddling in a scarf | Scarf around its neck |
 
 ---
 
@@ -69,7 +70,7 @@ Not into robots? Right click → **Character**. Every character does everything 
 | 💬 **Speech bubbles** | Short pixel-art bubbles (in Brazilian Portuguese for now): *"Claude Code terminou. Clique em mim para abrir"* |
 | 🧮 **Many chats at once** | Bit shows the most urgent one; hover him for a one-line summary (*"Bit: 1 chat trabalhando, 2 chats de boa"*) |
 | 🧗 **Walks everywhere** | Floor, walls and ceiling of your monitor, respecting the dock and top bar |
-| 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held |
+| 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held. Throw him at an edge shared with another monitor and he flies across |
 | 💤 **Moods** | Notices your cursor, enjoys being petted ❤, sleeps when nothing is happening |
 | 👻 **Never in the way** | Clicks go through everything except Bit himself. Hide him for 30 min or 2 h from the menu |
 | 🧹 **Self-cleaning** | Sessions whose `claude` process died are forgotten automatically |
@@ -127,7 +128,7 @@ Done. 🎉 Open a new Claude Code session and watch him go.
 | **Hover** | One-line status: *"Bit está trabalhando (Bash)"* |
 | **Hover** (even a quick pass) over the pet or the bubble, when done | Dismisses the "done" bubble and the ✓ (a click right after still opens the terminal) |
 | **Hover and wait** | Petting ❤ |
-| **Drag and release** | Pick him up, swing him around, throw him |
+| **Drag and release** | Pick him up, swing him around, throw him (even onto your other monitor) |
 | **Right click** | List of chats (click one to focus it), **character**, **rename**, **language** (automatic, Portuguese or English), **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
 
 ---
@@ -156,7 +157,7 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha` or `capivara` (the menu saves it here) |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara` or `pato` (the menu saves it here) |
 | `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
 | `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
@@ -228,7 +229,7 @@ Removes only Bit's hooks (backing up `settings.json` first), the `claude-pet` co
 ```
 claude-pet/
 ├── claude_pet/          ← the pet (python3 -m claude_pet)
-│   └── chars/           ← gecko, slime, capybara (one file each)
+│   └── chars/           ← gecko, slime, capybara, duckling (one file each)
 ├── hooks/               ← the Claude Code hook
 ├── tests/               ← hook → state → behavior
 ├── tools/               ← sprite previews, review page, README GIFs

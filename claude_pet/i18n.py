@@ -52,6 +52,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "char.lagartixa": {"pt": "Lagartixa", "en": "Gecko"},
     "char.gosminha": {"pt": "Gosminha", "en": "Slime"},
     "char.capivara": {"pt": "Capivara", "en": "Capybara"},
+    "char.pato": {"pt": "Patinho", "en": "Duckling"},
 }
 
 # nomes das línguas sempre no próprio idioma (assim quem não lê o atual acha o seu)

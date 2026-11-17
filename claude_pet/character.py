@@ -45,13 +45,17 @@ class Frame:
 
 class Pet:
     def __init__(self, cfg: Config, area: Rect, area_at: Callable[[float, float], Rect] | None = None,
-                 rng: random.Random | None = None, skin=None):
+                 rng: random.Random | None = None, skin=None,
+                 neighbor: Callable[[Rect, int, float], Rect | None] | None = None):
         from .skins import RobotSkin
         self.cfg = cfg
         self.skin = skin or RobotSkin()
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         self.area = area
         self.area_at = area_at or (lambda x, y: self.area)
+        # neighbor(área, lado -1/+1, y): o monitor encostado nessa borda da área, nessa altura (ou None).
+        # Arremessado contra uma borda com outro monitor do lado, ele atravessa em vez de quicar.
+        self.neighbor = neighbor or (lambda area, side, y: None)
         self.rng = rng or random.Random()
 
         self.mode = "free"
@@ -278,9 +282,11 @@ class Pet:
         self.y += self.vy * dt
         self.vx *= 0.995
         a = self.area_at(self.x + self.size / 2, self.y + self.size / 2)
-        if self.x < a.x:
+        cy = self.y + self.size / 2
+        # bate e volta na borda da tela, a não ser que do outro lado tenha outro monitor: aí passa direto
+        if self.x < a.x and not self.neighbor(a, -1, cy):
             self.x, self.vx = a.x, abs(self.vx) * 0.4
-        if self.x > a.x + a.w - self.size:
+        if self.x > a.x + a.w - self.size and not self.neighbor(a, 1, cy):
             self.x, self.vx = a.x + a.w - self.size, -abs(self.vx) * 0.4
         if self.y < a.y:
             self.y, self.vy = a.y, 0.0
