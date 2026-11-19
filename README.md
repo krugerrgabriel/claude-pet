@@ -14,6 +14,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white">
   <img alt="GTK" src="https://img.shields.io/badge/GTK-3-4A86CF?logo=gtk&logoColor=white">
   <img alt="X11" src="https://img.shields.io/badge/Linux-X11-FCC624?logo=linux&logoColor=black">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%2F11%20(beta)-0078D6?logo=windows&logoColor=white">
   <img alt="Claude Code hooks" src="https://img.shields.io/badge/Claude%20Code-hooks-D97757">
   <img alt="Zero pip" src="https://img.shields.io/badge/pip%20install-none-success">
 </p>
@@ -87,6 +88,18 @@ mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-p
 ```
 
 Downloads the latest [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) into `~/.local/share/claude-pet`, installs the hooks and the launcher, and starts the pet. **To update, run the same command** (then quit the pet from its menu and run `claude-pet` again). To remove it: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+
+### 🪟 On Windows (beta)
+
+You need Python 3 from [python.org](https://www.python.org/downloads/) or winget (`winget install Python.Python.3.12`), which ships with Tk. In PowerShell:
+
+```powershell
+$z="$env:TEMP\claude-pet.zip"; irm https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.zip -OutFile $z; Expand-Archive $z $env:LOCALAPPDATA -Force; py "$env:LOCALAPPDATA\claude-pet\install.py"
+```
+
+It downloads the latest release into `%LOCALAPPDATA%\claude-pet`, installs the hooks, adds a **Claude Pet** shortcut to the Start menu and to Startup (it opens by itself when you sign in) and starts the pet. **To update, run the same command.** To remove it: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
+
+On Windows the window is built with Tk instead of GTK, but the drawing, the characters and the behavior are the same. Clicking the pet brings up the Windows Terminal, console or VS Code window running that session.
 
 ### 🛠️ Or from source
 
@@ -220,7 +233,7 @@ Removes only Bit's hooks (backing up `settings.json` first), the `claude-pet` co
 | Layer | Tech | Why |
 |---|---|---|
 | **Hook** | Python 3 (stdlib) | Fast, can't break Claude Code, silent on stdout |
-| **Window** | GTK 3 + Cairo (PyGObject) | Transparent, click-through, already on your desktop |
+| **Window** | GTK 3 + Cairo (PyGObject) on Linux; Tk + ctypes on Windows | Transparent, click-through, nothing to install beyond Python |
 | **Art** | Pixel art drawn in code | Every pose is built from parts, so arms and legs really move |
 | **State** | One JSON file per session | Easy to inspect, no daemon, no socket |
 
@@ -286,6 +299,15 @@ Bit needs **X11**. On Wayland, GNOME doesn't let windows place themselves, so Bi
 <summary><strong>Clicking Bit doesn't focus my terminal</strong></summary>
 
 Install `wmctrl`: `sudo apt install wmctrl`. Terminals with tabs focus the window, not the exact tab.
+</details>
+
+<details>
+<summary><strong>Windows: the pet doesn't show up or doesn't react to Claude Code</strong></summary>
+
+- Run `py -c "import tkinter"`: if it fails, your Python has no Tk. Install it from python.org or with `winget install Python.Python.3.12`.
+- Start the pet from the **Claude Pet** shortcut in the Start menu.
+- Restart your Claude Code sessions and check the hooks: `Select-String claude_pet_hook $HOME\.claude\settings.json`
+- State files live in `%USERPROFILE%\.cache\claude-pet\sessions`.
 </details>
 
 <details>

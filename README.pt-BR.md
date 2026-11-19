@@ -14,6 +14,7 @@
   <img alt="Python" src="https://img.shields.io/badge/Python-3.8%2B-3776AB?logo=python&logoColor=white">
   <img alt="GTK" src="https://img.shields.io/badge/GTK-3-4A86CF?logo=gtk&logoColor=white">
   <img alt="X11" src="https://img.shields.io/badge/Linux-X11-FCC624?logo=linux&logoColor=black">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%2F11%20(beta)-0078D6?logo=windows&logoColor=white">
   <img alt="Claude Code hooks" src="https://img.shields.io/badge/Claude%20Code-hooks-D97757">
   <img alt="Zero pip" src="https://img.shields.io/badge/pip%20install-nenhum-success">
 </p>
@@ -87,6 +88,18 @@ mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-p
 ```
 
 Baixa a última [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) em `~/.local/share/claude-pet`, instala os hooks e o atalho, e já chama o pet. **Pra atualizar, é o mesmo comando** (depois feche o pet pelo menu e chame `claude-pet` de novo). Pra remover: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+
+### 🪟 No Windows (beta)
+
+Precisa do Python 3 do [python.org](https://www.python.org/downloads/) ou do winget (`winget install Python.Python.3.12`), que já vem com o Tk. No PowerShell:
+
+```powershell
+$z="$env:TEMP\claude-pet.zip"; irm https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.zip -OutFile $z; Expand-Archive $z $env:LOCALAPPDATA -Force; py "$env:LOCALAPPDATA\claude-pet\install.py"
+```
+
+Baixa a última release em `%LOCALAPPDATA%\claude-pet`, instala os hooks, cria o atalho **Claude Pet** no Menu Iniciar e na Inicialização (abre sozinho quando você entra no Windows) e já abre o pet. **Pra atualizar, é o mesmo comando.** Pra remover: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
+
+No Windows a janela é feita com Tk em vez de GTK, mas o desenho, os personagens e o comportamento são os mesmos. Clicar no pet traz pra frente o Windows Terminal, o console ou o VS Code onde a sessão está.
 
 ### 🛠️ Ou pelo código-fonte
 
@@ -220,7 +233,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 | Camada | Tecnologia | Por quê |
 |---|---|---|
 | **Hook** | Python 3 (stdlib) | Rápido, não quebra o Claude Code, silencioso no stdout |
-| **Janela** | GTK 3 + Cairo (PyGObject) | Transparente, clique atravessa, já vem no seu desktop |
+| **Janela** | GTK 3 + Cairo (PyGObject) no Linux; Tk + ctypes no Windows | Transparente, clique atravessa, nada pra instalar além do Python |
 | **Arte** | Pixel art desenhado em código | Cada pose é montada por partes, então braços e pernas se mexem de verdade |
 | **Estado** | Um JSON por sessão | Fácil de inspecionar, sem daemon, sem socket |
 
@@ -286,6 +299,15 @@ O Bit precisa de **X11**. No Wayland, o GNOME não deixa a janela se posicionar 
 <summary><strong>Clicar no Bit não foca o terminal</strong></summary>
 
 Instale o `wmctrl`: `sudo apt install wmctrl`. Em terminais com abas, ele foca a janela, não a aba exata.
+</details>
+
+<details>
+<summary><strong>Windows: o pet não aparece ou não reage ao Claude Code</strong></summary>
+
+- Rode `py -c "import tkinter"`: se der erro, seu Python não tem Tk. Instale pelo python.org ou `winget install Python.Python.3.12`.
+- Abra o pet pelo atalho **Claude Pet** do Menu Iniciar.
+- Reinicie as sessões do Claude Code e confira os hooks: `Select-String claude_pet_hook $HOME\.claude\settings.json`
+- Os arquivos de estado ficam em `%USERPROFILE%\.cache\claude-pet\sessions`.
 </details>
 
 <details>

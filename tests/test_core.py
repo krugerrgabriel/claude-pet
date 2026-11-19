@@ -380,6 +380,63 @@ class MultiMonitorTest(unittest.TestCase):
         self.assertEqual(pet.area, self.LEFT)
 
 
+class WindowsPortTest(unittest.TestCase):
+    """O que o Windows usa não pode depender de GTK/cairo, e tem que desenhar igual ao Linux."""
+
+    def test_windows_modules_import_without_gtk_or_cairo(self):
+        code = ("import sys; sys.modules['gi'] = None; sys.modules['cairo'] = None; "
+                "import claude_pet.core, claude_pet.raster, claude_pet.winapp, claude_pet.state, "
+                "claude_pet.focus, claude_pet.bubble, claude_pet.skins, claude_pet.chars.pato")
+        r = subprocess.run([sys.executable, "-c", code], cwd=str(Path(__file__).resolve().parents[1]),
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_raster_matches_cairo(self):
+        try:
+            import cairo
+        except ImportError:
+            self.skipTest("sem cairo")
+        import math
+        from claude_pet import raster, skins
+        for name in skins.available():
+            skin = skins.load(name)
+            for anim, rot, lean, facing in (("walk", 0, 0.0, -1), ("work", 90, 0.0, 1), ("dangle", 0, 0.3, 1)):
+                n = skin.canvas * 2
+                surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)
+                cr = cairo.Context(surf)
+                cr.translate(n / 2, n / 2)
+                cr.rotate(math.radians(rot))
+                cr.translate(-n / 2, -n / 2)
+                skin.draw(cr, anim, 1, 1, "working", 2, "#5ec4b6", lean, facing)
+                data, stride = surf.get_data(), surf.get_stride()
+                want = []
+                for y in range(n):
+                    for x in range(n):
+                        b, g, r_, a = data[y * stride + 4 * x:y * stride + 4 * x + 4]
+                        want.append(None if a < 128 else "#%02x%02x%02x" % (r_, g, b))
+                got = raster.render(skin, anim, 1, 1, "working", 2, "#5ec4b6", lean, facing, rot)
+                self.assertEqual(got, want, (name, anim, rot, lean))
+
+    def test_menu_model_has_everything(self):
+        from claude_pet.core import PetCore
+        from claude_pet import skins
+
+        class Fake(PetCore):
+            pass
+
+        f = Fake()
+        f._init_core()
+        f.cfg = Config()
+        f.skin = skins.load("pato")
+        f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        model = f.menu_model()
+        kinds = [e[0] for e in model]
+        self.assertEqual(kinds.count("radio"), 2)   # personagem e idioma
+        chars = next(e for e in model if e[0] == "radio")[2]
+        self.assertEqual([c[1] for c in chars].count(True), 1)
+        self.assertTrue(all(e[2] for e in model if e[0] == "item" and e[3]))
+
+
 class CrossesTest(unittest.TestCase):
     def test_fast_pass_over_rect_counts(self):
         from claude_pet.window import _crosses

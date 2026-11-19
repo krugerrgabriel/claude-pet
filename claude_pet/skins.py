@@ -21,8 +21,6 @@ import importlib.util
 import math
 import time
 
-import cairo
-
 from . import sprites
 from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 
@@ -88,6 +86,8 @@ class Skin:
             return
         # pêndulo: gira o personagem inteiro em volta do ponto onde o mouse segura.
         # Desenha fora da tela e gira a imagem com filtro "pixel mais próximo": nítido, sem frestas.
+        import cairo   # só no Linux (GTK); no Windows o desenho passa pelo raster.py
+
         n = self.canvas * scale
         off = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)
         self._render(cairo.Context(off), anim, frame, look, status, scale, body_color, facing)

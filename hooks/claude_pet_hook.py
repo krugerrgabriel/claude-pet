@@ -29,8 +29,59 @@ EVENT_STATUS = {
 }
 
 
+def _windows_processes() -> dict:
+    """pid → (pid do pai, nome do .exe), via Toolhelp (ctypes; só stdlib)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Entry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("pid", wintypes.DWORD),
+                    ("heap", ctypes.c_size_t), ("module", wintypes.DWORD), ("threads", wintypes.DWORD),
+                    ("ppid", wintypes.DWORD), ("prio", ctypes.c_long), ("flags", wintypes.DWORD),
+                    ("exe", wintypes.WCHAR * 260)]
+
+    k32 = ctypes.WinDLL("kernel32")
+    k32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    k32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    k32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
+    k32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
+    snap = k32.CreateToolhelp32Snapshot(0x2, 0)
+    if not snap or snap == ctypes.c_void_p(-1).value:
+        return {}
+    out = {}
+    try:
+        e = Entry()
+        e.dwSize = ctypes.sizeof(Entry)
+        ok = k32.Process32FirstW(snap, ctypes.byref(e))
+        while ok:
+            out[e.pid] = (e.ppid, e.exe.lower())
+            ok = k32.Process32NextW(snap, ctypes.byref(e))
+    finally:
+        k32.CloseHandle(snap)
+    return out
+
+
+def _find_claude_pid_windows() -> int:
+    """Sobe a partir deste processo até o claude.exe (instalação nativa) ou, se não houver, o node.exe (npm)."""
+    procs = _windows_processes()
+    pid, node = os.getpid(), 0
+    for _ in range(10):
+        if pid not in procs:
+            break
+        ppid, exe = procs[pid]
+        if exe == "claude.exe":
+            return pid
+        if exe == "node.exe" and not node:
+            node = pid
+        pid = ppid
+    return node
+
+
 def find_claude_pid() -> int:
     """Sobe na árvore de processos até achar o processo `claude`."""
+    if os.name == "nt":
+        return _find_claude_pid_windows()
     pid = os.getppid()
     for _ in range(8):
         try:
@@ -150,7 +201,15 @@ def main() -> None:
     SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(f".{os.getpid()}.tmp")
     tmp.write_text(json.dumps(state))
-    os.replace(tmp, path)
+    for attempt in range(5):   # no Windows o replace falha se o pet estiver lendo o arquivo naquele instante
+        try:
+            os.replace(tmp, path)
+            break
+        except PermissionError:
+            if attempt == 4:
+                tmp.unlink()
+                raise
+            time.sleep(0.02)
 
 
 if __name__ == "__main__":

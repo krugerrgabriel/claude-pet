@@ -14,36 +14,14 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
-from . import bubble, focus, i18n, skins  # noqa: E402
-from .i18n import t  # noqa: E402
+from . import bubble, skins  # noqa: E402
 from .character import Frame, Pet, Rect  # noqa: E402
 from .config import Config  # noqa: E402
-from .sprites import STATUS_COLORS  # noqa: E402
-from .state import Session, StateStore  # noqa: E402
+from .core import PetCore, _crosses  # noqa: E402,F401  (_crosses: usado pelos testes)
+from .i18n import t  # noqa: E402
+from .state import StateStore  # noqa: E402
 
 DEBUG = bool(os.environ.get("CLAUDE_PET_DEBUG"))
-
-def _status(st: str) -> str:
-    return t(f"status.{st}") if f"status.{st}" in i18n.STRINGS else st
-
-
-def _crosses(p0, p1, rect) -> bool:
-    """O mouse passou por dentro de rect = (x, y, w, h) entre um tick e outro?
-
-    Amostra o segmento p0→p1 a cada ~3 px, então uma passada rápida por cima também conta.
-    """
-    if p1 is None or rect is None:
-        return False
-    x, y, w, h = rect
-    p0 = p0 or p1
-    steps = max(1, int(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / 3))
-    for i in range(steps + 1):
-        t = i / steps
-        px, py = p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t
-        if x <= px <= x + w and y <= py <= y + h:
-            return True
-    return False
-
 
 def _transparent(win: Gtk.Window) -> None:
     screen = win.get_screen()
@@ -109,7 +87,7 @@ class Bubble(Gtk.Window):
         return True
 
 
-class PetWindow(Gtk.Window):
+class PetWindow(PetCore, Gtk.Window):
     def __init__(self, cfg: Config, store: StateStore):
         super().__init__(type=Gtk.WindowType.POPUP)
         self.cfg = cfg
@@ -124,20 +102,9 @@ class PetWindow(Gtk.Window):
         self.pet = Pet(cfg, self._primary_area(), self._area_at, skin=self.skin, neighbor=self._neighbor)
         self.bubble = Bubble()
 
-        self.frame: Frame | None = None
-        self.sessions: list[Session] = []
-        self.top: Session | None = None
-        self.last_poll = 0.0
-        self.last_raise = 0.0
-        self.last_tick = time.monotonic()
-        self.hidden_until = 0.0
-        self.pressed = False
+        self._init_core()
         self._shape_rot = None
         self._last_dbg = 0.0
-        self._last_pointer = None
-        self._just_seen = None      # (sessão, monotonic) do "terminou" dispensado no hover: o clique ainda abre
-        self._quiet_hover = False   # acabou de dispensar o "terminou": sem balão até o mouse sair
-        self.sleep_since = 0.0      # time.time() de quando foi botado pra dormir
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK
                         | Gdk.EventMask.POINTER_MOTION_MASK)
@@ -194,11 +161,7 @@ class PetWindow(Gtk.Window):
         now = time.monotonic()
         dt, self.last_tick = now - self.last_tick, now
 
-        if now - self.last_poll > 0.25:
-            self.last_poll = now
-            self.sessions = self.store.sessions()
-            self.top = self.sessions[0] if self.sessions else None
-            self._maybe_wake()
+        self._poll(now)
 
         if now < self.hidden_until:
             return True
@@ -235,43 +198,6 @@ class PetWindow(Gtk.Window):
                 gdk_win.raise_()
         return True
 
-    def _dismiss_done_on_hover(self, pointer, now: float) -> None:
-        """Mouse passou (mesmo rapidinho) pelo Bit ou pelo balão = "vi que terminou": some o balão e o ✓."""
-        prev, self._last_pointer = self._last_pointer, pointer
-        x, y = self.pet.position()
-        pet_rect = (x, y, self.size, self.size)
-        if self._quiet_hover and not (pointer and self.pet.contains(*pointer)):
-            self._quiet_hover = False
-        if self.pressed or not (self.top and self.top.status == "done"):
-            return
-        if not (_crosses(prev, pointer, pet_rect) or _crosses(prev, pointer, self.bubble.rect)):
-            return
-        self._just_seen = (self.top, now)
-        for sess in self.sessions:
-            if sess.status == "done":
-                self.store.acknowledge(sess)
-        self.sessions = self.store.sessions()
-        self.top = self.sessions[0] if self.sessions else None
-        self._quiet_hover = True
-
-    # ------------------------------------------------------------ dormir
-    def _sleep(self) -> None:
-        self.sleep_since = time.time()
-        self.pet.sleep_now()
-
-    def _wake(self) -> None:
-        self.sleep_since = 0.0
-        self.pet.wake()
-
-    def _maybe_wake(self) -> None:
-        """Acorda com um prompt novo seu ou quando o Claude pede permissão (aí ele precisa de você)."""
-        if not self.sleep_since:
-            return
-        for sess in self.sessions:
-            if sess.prompt_ts > self.sleep_since or (sess.status == "attention" and sess.since > self.sleep_since):
-                self._wake()
-                return
-
     # ------------------------------------------------------------ desenho
     def _draw(self, _w, cr):
         cr.set_operator(cairo.OPERATOR_SOURCE)
@@ -307,41 +233,9 @@ class PetWindow(Gtk.Window):
         self._shape_rot = (rotation, facing)
 
     # ------------------------------------------------------------ balão
-    def _bubble_text(self, frame: Frame) -> str:
-        top = self.top
-        busy = [s for s in self.sessions if s.status != "idle"]
-        extra = f" (+{len(busy) - 1})" if len(busy) > 1 else ""
-        pointer = self._pointer()
-        hovering = pointer is not None and self.pet.contains(*pointer)
-
-        if top and top.status == "attention":
-            msg = i18n.claude_message(top.message)
-            return f"{msg or t('bubble.needs_you')}{extra}.\n{t('bubble.click')}"
-        if top and top.status == "done" and frame.anim in ("waiting", "celebrate"):
-            return f"{t('bubble.done')}{extra}.\n{t('bubble.click')}"
-        if not hovering or self.pressed or self._quiet_hover:
-            return ""
-        name = self.cfg.display_name
-        if self.pet.forced_sleep:
-            return t("bubble.sleeping", name=name)
-        if not self.sessions:
-            return t("bubble.no_sessions", name=name)
-        if len(self.sessions) == 1:
-            sess = self.sessions[0]
-            detail = _status(sess.status)
-            if sess.status == "working" and sess.tool:
-                detail = f"{detail} ({sess.tool})"
-            return t("bubble.one", name=name, status=detail)
-        counts: dict[str, int] = {}
-        for sess in self.sessions:  # já vêm do mais urgente pro menos
-            counts[sess.status] = counts.get(sess.status, 0) + 1
-        return f"{name}: " + ", ".join(t("bubble.chats_one" if n == 1 else "bubble.chats_many", n=n,
-                                         status=_status(st)) for st, n in counts.items())
-
     def _update_bubble(self, frame: Frame) -> None:
         text = self._bubble_text(frame) if frame.rotation == 0 else ""
-        s = self.skin.pixel_scale(self.cfg.scale)
-        self.bubble.show_text(text, frame.x + self.size // 2, frame.y + (self.skin.hit[1] - 1) * s, self.pet.area)
+        self.bubble.show_text(text, *self._bubble_anchor(frame), self.pet.area)
 
     # ------------------------------------------------------------ mouse
     def _on_press(self, _w, ev):
@@ -365,52 +259,38 @@ class PetWindow(Gtk.Window):
             self._click()
         return True
 
-    def _click(self) -> None:
-        top = self.top
-        seen = self._just_seen
-        if top and top.status in ("attention", "done"):
-            focus.focus_session(top.claude_pid, top.project)
-            self.store.acknowledge(top)
-        elif seen and time.monotonic() - seen[1] < 8:  # passou o mouse e já clicou: abre o terminal mesmo assim
-            self._just_seen = None
-            focus.focus_session(seen[0].claude_pid, seen[0].project)
-        else:
-            self.pet.cheer()
-
     def _menu(self, ev) -> None:
+        self._build_menu(self.menu_model()).popup_at_pointer(ev)
+
+    def _build_menu(self, model) -> Gtk.Menu:
         menu = Gtk.Menu()
-        if self.sessions:
-            for s in self.sessions[:8]:
-                item = Gtk.MenuItem(label=f"{s.project}: {_status(s.status)}")
-                item.connect("activate", lambda _i, sess=s: (focus.focus_session(sess.claude_pid, sess.project),
-                                                              self.store.acknowledge(sess)))
+        for entry in model:
+            if entry[0] == "sep":
+                menu.append(Gtk.SeparatorMenuItem())
+            elif entry[0] == "item":
+                _kind, label, action, enabled = entry
+                item = Gtk.MenuItem(label=label)
+                item.set_sensitive(enabled)
+                if action:
+                    item.connect("activate", lambda _i, a=action: a())
                 menu.append(item)
-        else:
-            item = Gtk.MenuItem(label=t("menu.no_sessions"))
-            item.set_sensitive(False)
-            menu.append(item)
-        menu.append(Gtk.SeparatorMenuItem())
-        menu.append(self._skin_menu())
-        rename = Gtk.MenuItem(label=t("menu.rename"))
-        rename.connect("activate", lambda _i: self._rename())
-        menu.append(rename)
-        menu.append(self._language_menu())
-        if self.pet.forced_sleep:
-            item = Gtk.MenuItem(label=t("menu.wake"))
-            item.connect("activate", lambda _i: self._wake())
-        else:
-            item = Gtk.MenuItem(label=t("menu.sleep"))
-            item.connect("activate", lambda _i: self._sleep())
-        menu.append(item)
-        for label, minutes in ((t("menu.hide_30"), 30), (t("menu.hide_2h"), 120)):
-            item = Gtk.MenuItem(label=label)
-            item.connect("activate", lambda _i, m=minutes: self._hide_for(m))
-            menu.append(item)
-        quit_item = Gtk.MenuItem(label=t("menu.quit"))
-        quit_item.connect("activate", lambda _i: Gtk.main_quit())
-        menu.append(quit_item)
+            else:
+                _kind, label, options = entry
+                sub, group = Gtk.Menu(), None
+                for opt_label, checked, action in options:
+                    item = Gtk.RadioMenuItem.new_with_label_from_widget(group, opt_label)
+                    group = group or item
+                    item.set_active(checked)
+                    item.connect("toggled", lambda i, a=action: i.get_active() and a())
+                    sub.append(item)
+                root = Gtk.MenuItem(label=label)
+                root.set_submenu(sub)
+                menu.append(root)
         menu.show_all()
-        menu.popup_at_pointer(ev)
+        return menu
+
+    def _quit(self) -> None:
+        Gtk.main_quit()
 
     def _rename(self) -> None:
         """Janelinha pra escolher o nome do pet. Vazio = "Seu pet"."""
@@ -432,48 +312,10 @@ class PetWindow(Gtk.Window):
         name = entry.get_text().strip()
         dlg.destroy()
         if response == Gtk.ResponseType.OK:
-            self.cfg.save_key("pet_name", name)
+            self._set_name(name)
 
-    def _skin_menu(self) -> Gtk.MenuItem:
-        sub = Gtk.Menu()
-        group = None
-        for name in skins.available():
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(group, skins.label(name))
-            group = group or item
-            item.set_active(name == self.skin.name)
-            item.connect("toggled", lambda i, n=name: i.get_active() and self._set_skin(n))
-            sub.append(item)
-        root = Gtk.MenuItem(label=t("menu.character"))
-        root.set_submenu(sub)
-        return root
-
-    def _language_menu(self) -> Gtk.MenuItem:
-        sub = Gtk.Menu()
-        group = None
-        options = [("auto", t("menu.lang_auto"))] + [(code, i18n.LANGUAGE_NAMES[code]) for code in i18n.LANGUAGES]
-        chosen = (self.cfg.language or "auto").lower()
-        for code, label in options:
-            item = Gtk.RadioMenuItem.new_with_label_from_widget(group, label)
-            group = group or item
-            item.set_active(code == chosen)
-            item.connect("toggled", lambda i, c=code: i.get_active() and self._set_language(c))
-            sub.append(item)
-        root = Gtk.MenuItem(label=t("menu.language"))
-        root.set_submenu(sub)
-        return root
-
-    def _set_language(self, code: str) -> None:
-        self.cfg.save_key("language", code)
-        i18n.set_language(code)   # balão e menu já saem no idioma novo
-
-    def _set_skin(self, name: str) -> None:
-        if name == self.skin.name:
-            return
-        self.skin = skins.load(name)
-        self.cfg.save_key("skin", name)
-        self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
+    def _apply_skin(self) -> None:
         self.resize(self.size, self.size)
-        self.pet.set_skin(self.skin)   # solta e cai de novo no chão
         self._shape_rot = None         # recalcula a área clicável no próximo tick
         self.queue_draw()
 

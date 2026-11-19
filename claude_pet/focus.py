@@ -1,6 +1,8 @@
-"""Traz para frente a janela do terminal onde a sessão do Claude Code está rodando (X11 + wmctrl)."""
+"""Traz para frente a janela do terminal onde a sessão do Claude Code está rodando
+(Linux: X11 + wmctrl; Windows: ver winsys.focus_session)."""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,6 +21,9 @@ def _ancestors(pid: int) -> list[int]:
 
 
 def focus_session(claude_pid: int, project: str = "") -> bool:
+    if os.name == "nt":
+        from .winsys import focus_session as win_focus
+        return win_focus(claude_pid, project)
     if not shutil.which("wmctrl") or claude_pid <= 0:
         return False
     try:

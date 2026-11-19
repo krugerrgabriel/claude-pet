@@ -42,7 +42,22 @@ class Session:
 def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return True  # sem pid registrado: não dá pra saber, assume vivo
+    if os.name == "nt":
+        from .winsys import pid_alive
+        return pid_alive(pid)
     return Path(f"/proc/{pid}").exists()
+
+
+def _replace(src: Path, dst: Path) -> None:
+    """os.replace com algumas tentativas: no Windows falha se outro processo está lendo o destino."""
+    for attempt in range(5):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if attempt == 4:
+                raise
+            time.sleep(0.02)
 
 
 class StateStore:
@@ -66,7 +81,7 @@ class StateStore:
         try:
             tmp = self._acked_file.with_suffix(".tmp")
             tmp.write_text(json.dumps(self._acked))
-            os.replace(tmp, self._acked_file)
+            _replace(tmp, self._acked_file)
         except OSError:
             pass
 

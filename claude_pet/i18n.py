@@ -63,6 +63,9 @@ _current = "pt"
 
 def system_language(environ=None) -> str:
     """Idioma das mensagens do sistema, na mesma ordem que o gettext/GTK usam."""
+    if environ is None and os.name == "nt":   # no Windows vale o idioma da interface, não variáveis de ambiente
+        from .winsys import ui_language
+        return ui_language()
     env = os.environ if environ is None else environ
     for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
         value = (env.get(var) or "").strip()
