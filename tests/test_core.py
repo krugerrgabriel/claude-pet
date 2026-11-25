@@ -280,6 +280,69 @@ class SkinTest(unittest.TestCase):
         self.assertEqual(skins.available()[0], skins.ROBOT)
 
 
+class ConfusedTest(unittest.TestCase):
+    """De vez em quando, quem tem a animação "confused" larga o que está fazendo e fica confuso."""
+
+    def setUp(self):
+        import claude_pet.character as C
+        self.C, self.t = C, [1000.0]
+        self.orig = C.time.monotonic
+        C.time.monotonic = lambda: self.t[0]
+
+    def tearDown(self):
+        self.C.time.monotonic = self.orig
+
+    def pet_on_floor(self, name, **cfg):
+        from claude_pet import skins
+        pet = Pet(Config(**cfg), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skins.load(name))
+        pet._attach_floor()
+        pet.last_activity = self.t[0]
+        return pet
+
+    def step(self, pet, status="idle", seconds=0.0):
+        """Avança `seconds` em passos de 1/30 s; devolve as animações de cada passo."""
+        anims = []
+        for _ in range(max(1, round(seconds * 30))):
+            self.t[0] += 1 / 30
+            anims.append(pet.tick(1 / 30, status, None).anim)
+        return anims
+
+    def test_stops_walking_gets_confused_then_goes_back(self):
+        pet = self.pet_on_floor("pato_cachecol")
+        pet.next_confused = self.t[0] + 100
+        pet.idle_action, pet.target_s, pet.action_until = "walk", pet.seg[0] - 1, self.t[0] + 100
+        self.assertIn("walk", self.step(pet, seconds=0.5))
+        pet.next_confused = self.t[0]
+        where = pet.position()
+        fps, n = pet.skin.anim_info("confused")
+        self.assertEqual(set(self.step(pet, seconds=n / fps - 0.1)), {"confused"})
+        self.assertEqual(pet.position(), where)               # parou onde estava
+        self.assertEqual(self.step(pet, seconds=0.5)[-1], "walk")   # acabou: volta a andar
+        self.assertGreater(pet.next_confused, self.t[0] + 30)       # a próxima já está sorteada
+
+    def test_interrupts_claude_states_too(self):
+        pet = self.pet_on_floor("pato_cachecol")
+        pet.next_confused = self.t[0]
+        self.assertEqual(set(self.step(pet, "working", 0.5)), {"confused"})
+
+    def test_never_while_sleeping(self):
+        pet = self.pet_on_floor("pato_cachecol")
+        pet.sleep_now()                                       # "botar pra dormir"
+        pet.next_confused = self.t[0]
+        self.assertNotIn("confused", self.step(pet, seconds=1.0))
+        pet = self.pet_on_floor("pato_cachecol", sleep_after=1.0)
+        pet.next_confused = self.t[0] + 100
+        self.assertEqual(self.step(pet, seconds=2.0)[-1], "sleep")   # cochilou sozinho
+        pet.next_confused = self.t[0]
+        self.assertNotIn("confused", self.step(pet, seconds=1.0))
+
+    def test_only_who_has_the_animation_and_can_be_turned_off(self):
+        for name, cfg in (("robo", {}), ("pato", {}), ("pato_cachecol", {"confused_every": 0})):
+            pet = self.pet_on_floor(name, **cfg)
+            pet.next_confused = self.t[0]
+            self.assertNotIn("confused", self.step(pet, seconds=1.0), name)
+
+
 class SwingTest(unittest.TestCase):
     def test_dragging_right_leans_body_left_then_settles(self):
         from claude_pet import skins
