@@ -7,6 +7,7 @@ Movimento:
     (base esquerda→direita, parede direita subindo, teto direita→esquerda, parede esquerda descendo).
   - "free": solto (caindo/arremessado) até tocar o chão.
   - "drag": segurado pelo mouse.
+  - "fly": voando pela tela (só personagens com `flies`, enquanto o Claude trabalha).
 Quando o Claude não está ocioso, ele desce para o chão (se estiver em parede/teto, solta e cai).
 """
 from __future__ import annotations
@@ -216,8 +217,15 @@ class Pet:
         look = self.direction
 
         self._swing(dt)
+        wants_fly = self.skin.flies and self.status == "working" and not self.forced_sleep
+        if self.mode == "fly" and not wants_fly:
+            self._land()
+        elif wants_fly and self.mode in ("edge", "free"):
+            self._take_off(now)
         if self.mode == "drag":
             anim = "dangle"
+        elif self.mode == "fly":
+            anim, look = self._fly(dt, now)
         elif self.mode == "free":
             anim = self._physics(dt)
         else:
@@ -295,6 +303,48 @@ class Pet:
             self._attach_floor()
             return "stand"
         return "dangle"
+
+    # ------------------------------------------------------------ voo
+    def _take_off(self, now: float) -> None:
+        self.x, self.y = self.position()
+        self.mode = "fly"
+        self.vx, self.vy = 0.0, -260.0   # impulso pra cima
+        self._pick_fly_target(now)
+
+    def _pick_fly_target(self, now: float) -> None:
+        a = self.area
+        self.fly_target = (self.rng.uniform(a.x, a.x + a.w - self.size),
+                           self.rng.uniform(a.y + a.h * 0.05, a.y + a.h * 0.6 - self.size / 2))
+        self.fly_until = now + self.rng.uniform(3, 7)
+
+    def _land(self) -> None:
+        """Para de voar: plana até o chão (a física faz o resto)."""
+        self.mode = "free"
+        self.vx *= 0.5
+        self.vy = min(self.vy, 0.0)
+
+    def _fly(self, dt: float, now: float) -> tuple[str, int]:
+        """Voa em direção a um ponto aleatório da metade de cima da tela, fazendo curva suave."""
+        self.area = self.area_at(self.x + self.size / 2, self.y + self.size / 2)
+        tx, ty = self.fly_target
+        dx, dy = tx - self.x, ty - self.y
+        dist = math.hypot(dx, dy)
+        if dist < 30 or now > self.fly_until:
+            self._pick_fly_target(now)
+        speed = self.cfg.walk_speed * 3.5
+        want_vx = dx / max(dist, 1) * speed
+        want_vy = dy / max(dist, 1) * speed * 0.6
+        k = min(1.0, dt * 1.6)   # inércia: faz curva em vez de virar na hora
+        self.vx += (want_vx - self.vx) * k
+        self.vy += (want_vy - self.vy) * k
+        self.x += self.vx * dt
+        self.y += self.vy * dt + math.sin(now * 3) * 12 * dt   # sobe e desce de leve
+        a = self.area
+        self.x = min(max(self.x, a.x), a.x + a.w - self.size)
+        self.y = min(max(self.y, a.y), self.floor_y)
+        if abs(self.vx) > 20:
+            self.direction = 1 if self.vx > 0 else -1
+        return "work", self.direction
 
     def _walk_towards(self, target: float, dt: float, speed: float) -> bool:
         p = self.perimeter

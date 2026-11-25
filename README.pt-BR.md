@@ -59,6 +59,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | <img src="docs/chars/gosminha.gif" width="300"> | **Gosminha**, pulinhos de gelatina | Bolhinha dentro da gosma |
 | <img src="docs/chars/capivara.gif" width="300"> | **Capivara**, zen até o Claude precisar de você | Frutinha na cabeça |
 | <img src="docs/chars/pato.gif" width="300"> | **Patinho**, gingando de cachecol | Cachecol no pescoço |
+| <img src="docs/chars/dragao.gif" width="300"> | **Dragão**, levanta voo e fica voando pela tela enquanto o Claude trabalha | Brasa no peito (e o fogo) |
 
 ---
 
@@ -170,7 +171,7 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara` ou `pato` (o menu grava aqui) |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato` ou `dragao` (o menu grava aqui) |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
 | `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
@@ -242,7 +243,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 ```
 claude-pet/
 ├── claude_pet/          ← o pet (python3 -m claude_pet)
-│   └── chars/           ← lagartixa, gosminha, capivara, pato (um arquivo cada)
+│   └── chars/           ← lagartixa, gosminha, capivara, pato, dragao (um arquivo cada)
 ├── hooks/               ← o hook do Claude Code
 ├── tests/               ← hook → estado → comportamento
 ├── tools/               ← prévias dos sprites, página de revisão, GIFs do README

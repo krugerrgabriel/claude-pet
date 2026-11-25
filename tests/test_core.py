@@ -267,7 +267,7 @@ class SkinTest(unittest.TestCase):
 
     def test_unknown_skin_falls_back_to_robot(self):
         from claude_pet import skins
-        self.assertEqual(skins.load("dragao").name, skins.ROBOT)
+        self.assertEqual(skins.load("unicornio").name, skins.ROBOT)
         self.assertEqual(skins.available()[0], skins.ROBOT)
 
 
