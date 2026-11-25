@@ -13,7 +13,9 @@ Um módulo de personagem em chars/ define:
   OVERLAYS      {animação: nome do efeito}            (opcional; padrão em DEFAULT_OVERLAYS)
   OVERLAY_AT    {efeito: (dx, dy)}                    (opcional; desloca o efeito)
   FLIES_WHEN_WORKING  True = trabalhando, sai voando pela tela tocando "work" (opcional)
+  REST_SITS     True = no chão, toda pausa é sentado em vez de em pé (opcional; padrão False)
   render(pen, anim, frame, look, light)  desenha; `light` é a cor do status (a "luzinha")
+  set_smooth(on) liga/desliga o crossfade entre quadros (opcional; quem tem ganha o menu "Animação")
 """
 from __future__ import annotations
 
@@ -26,7 +28,7 @@ from . import sprites
 from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 
 ROBOT = "robo"
-ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao"]
+ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "pato_cachecol", "capivara_dev"]
 
 ANIM_NAMES = ["stand", "walk", "sit", "sleep", "curious", "happy", "think", "think_walk", "work",
               "attention", "celebrate", "waiting", "dangle"]
@@ -47,10 +49,11 @@ def label(name: str) -> str:
     return importlib.import_module(f".chars.{name}", __package__).LABEL
 
 
-def load(name: str = ROBOT) -> "Skin":
+def load(name: str = ROBOT, smooth: bool = True) -> "Skin":
+    """`smooth`: animação suave (crossfade) nos personagens que têm essa opção."""
     if name == ROBOT or name not in available():
         return RobotSkin()
-    return CharSkin(name)
+    return CharSkin(name, smooth)
 
 
 def status_light(status: str) -> str:
@@ -67,9 +70,14 @@ class Skin:
     hit = (0, 0, CANVAS, CANVAS)
     pivot = (CANVAS // 2, 0)
     pace_thinking = True
+    rest_sits = False
     self_hop = False
     side_view = False
     flies = False          # True = sai voando pela tela enquanto o Claude trabalha
+    smoothable = False     # tem animação suave (crossfade) que dá pra desligar
+
+    def set_smooth(self, on: bool) -> None:
+        pass
 
     @staticmethod
     def pixel_scale(scale: int) -> int:
@@ -124,17 +132,24 @@ class RobotSkin(Skin):
 
 
 class CharSkin(Skin):
-    def __init__(self, name: str):
+    def __init__(self, name: str, smooth: bool = True):
         self.name = name
         self.mod = importlib.import_module(f".chars.{name}", __package__)
         m = self.mod
         self.hit = m.HIT
         self.pivot = m.PIVOT
         self.pace_thinking = getattr(m, "PACE_THINKING", True)
+        self.rest_sits = getattr(m, "REST_SITS", False)
         self.side_view = getattr(m, "SIDE_VIEW", False)
         self.flies = getattr(m, "FLIES_WHEN_WORKING", False)
         self.overlays = {**DEFAULT_OVERLAYS, **getattr(m, "OVERLAYS", {})}
         self.overlay_at = getattr(m, "OVERLAY_AT", {})
+        self.smoothable = hasattr(m, "set_smooth")
+        self.set_smooth(smooth)   # o módulo fica carregado entre um load e outro: sempre reaplica
+
+    def set_smooth(self, on: bool) -> None:
+        if self.smoothable:
+            self.mod.set_smooth(on)
 
     def anim_info(self, anim: str) -> tuple[float, int]:
         return self.mod.ANIMS[anim]

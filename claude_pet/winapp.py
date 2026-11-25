@@ -104,7 +104,7 @@ class TkPetApp(PetCore):
         self.root = tk.Tk()
         self.root.title("Claude Pet")
         _borderless(self.root)
-        self.skin = skins.load(cfg.skin)
+        self.skin = skins.load(cfg.skin, cfg.smooth_for(cfg.skin))
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         self.photo = tk.PhotoImage(width=self.size, height=self.size)
         self.label = tk.Label(self.root, image=self.photo, bd=0, highlightthickness=0, bg=KEY)

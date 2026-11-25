@@ -417,7 +417,8 @@ class Pet:
 
         if now > self.action_until:
             self._pick_idle_action(now)
-        if self.idle_action == "sit" and self.on_floor:
+        resting = self.idle_action == "sit" or (self.idle_action == "pause" and self.skin.rest_sits)
+        if resting and self.on_floor:
             return "sit", 0
         return "stand", 0
 

@@ -33,6 +33,9 @@ STRINGS: dict[str, dict[str, str]] = {
     # menu
     "menu.no_sessions": {"pt": "Nenhuma sessão aberta", "en": "No open sessions"},
     "menu.character": {"pt": "Personagem", "en": "Character"},
+    "menu.animation": {"pt": "Animação", "en": "Animation"},
+    "menu.anim_smooth": {"pt": "Suave (crossfade)", "en": "Smooth (crossfade)"},
+    "menu.anim_frames": {"pt": "Quadro a quadro (sem crossfade)", "en": "Frame by frame (no crossfade)"},
     "menu.rename": {"pt": "Mudar nome…", "en": "Rename…"},
     "menu.language": {"pt": "Idioma", "en": "Language"},
     "menu.lang_auto": {"pt": "Automático (sistema)", "en": "Automatic (system)"},
@@ -54,6 +57,9 @@ STRINGS: dict[str, dict[str, str]] = {
     "char.capivara": {"pt": "Capivara", "en": "Capybara"},
     "char.pato": {"pt": "Patinho", "en": "Duckling"},
     "char.dragao": {"pt": "Dragão", "en": "Dragon"},
+    "char.pato_confuso": {"pt": "Pato Pistola", "en": "Mad Duck"},
+    "char.pato_cachecol": {"pt": "Pato de Cachecol", "en": "Scarf Duck"},
+    "char.capivara_dev": {"pt": "Capivara Dev", "en": "Dev Capybara"},
 }
 
 # nomes das línguas sempre no próprio idioma (assim quem não lê o atual acha o seu)
