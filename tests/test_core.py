@@ -445,6 +445,53 @@ class WindowsPortTest(unittest.TestCase):
         self.assertEqual([c[1] for c in chars].count(True), 1)
         self.assertTrue(all(e[2] for e in model if e[0] == "item" and e[3]))
 
+    def test_smooth_animation_can_be_turned_off(self):
+        from claude_pet import config as C, raster, skins
+        from claude_pet.core import PetCore
+        from claude_pet.i18n import t
+
+        class Fake(PetCore):
+            def _apply_skin(self):
+                pass
+
+        def pixels(i):
+            return raster.render(f.skin, "walk", i, 0, "idle", 3, "#5ec4b6", 0.0, 1, 0)
+
+        def anim_menu():
+            found = [e[2] for e in f.menu_model() if e[0] == "radio" and e[1] == t("menu.animation")]
+            return found[0] if found else None
+
+        orig = C.CONFIG_FILE
+        with tempfile.TemporaryDirectory() as tmp:
+            C.CONFIG_FILE = Path(tmp) / "config.json"
+            try:
+                f = Fake()
+                f._init_core()
+                f.cfg = Config()
+                f.skin = skins.load("pato_cachecol", f.cfg.smooth_for("pato_cachecol"))
+                f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=f.skin)
+                self.assertEqual([o[1] for o in anim_menu()], [True, False])   # padrão: suave
+                self.assertNotEqual(pixels(0), pixels(1))       # quadro misturado com o próximo
+                walk = f.skin.anim_info("walk")
+
+                anim_menu()[1][2]()                              # menu: "Quadro a quadro"
+                self.assertEqual(json.loads(C.CONFIG_FILE.read_text())["smooth_anim"], {"pato_cachecol": False})
+                self.assertEqual([o[1] for o in anim_menu()], [False, True])
+                self.assertEqual(f.skin.anim_info("walk"), walk)   # mesmo ritmo
+                self.assertEqual(pixels(0), pixels(1))
+                self.assertEqual(pixels(1), pixels(2))
+                self.assertNotEqual(pixels(2), pixels(3))       # próximo quadro da folha
+
+                cfg = Config.load()                              # reabrindo o pet, continua desligado
+                self.assertFalse(cfg.smooth_for("pato_cachecol"))
+                f._set_skin("capivara_dev")                      # cada personagem tem a sua escolha
+                self.assertEqual([o[1] for o in anim_menu()], [True, False])
+                f._set_skin("pato")                              # desenhado em código: sem o menu
+                self.assertIsNone(anim_menu())
+            finally:
+                C.CONFIG_FILE = orig
+                skins.load("pato_cachecol")                      # volta o módulo pro padrão
+
 
 class CrossesTest(unittest.TestCase):
     def test_fast_pass_over_rect_counts(self):
