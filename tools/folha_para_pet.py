@@ -1,6 +1,6 @@
 """Converte uma folha de sprites (9 animações, uma por linha) nos quadros de um personagem do pet.
 
-    python3 tools/folha_para_pet.py <personagem> folha.png claude_pet/chars/<personagem>.bin [previa.png]
+    python3 tools/folha_para_pet.py <personagem> folha.png claude_pet/chars/<personagem>.bin [previa.png] [nome=tira.png ...]
 
 As linhas da folha, nesta ordem: parado, andando, pensando, trabalhando, dormindo, feliz, comemorando,
 atenção, pendurado. Cada personagem tem a sua configuração em SHEETS (grade da folha e consertos).
@@ -38,6 +38,9 @@ HANG = 8                         # a linha do "pendurado": alinha pela mão, em 
 #   patch                  (linha, coluna) com defeito -> vizinho de onde copiar a parte de baixo
 #   cuts                   (linha, coluna) -> y onde o de baixo encosta no de cima: corta ali
 #   bg_warm                fundo quente: só tom avermelhado conta como fundo (salva roupa cinza/preta)
+#   extra                  tiras de uma linha feitas depois (uma animação a mais): nome -> {cols, src};
+#                          na linha de comando, `nome=tira.png`. Cada quadro fica com os pés no chão e
+#                          centrado no personagem; src é na escala da tira (pra ele sair do mesmo tamanho).
 SHEETS = {
     "pato_cachecol": {
         "cols": [145 + 150 * k for k in range(9)],
@@ -48,6 +51,11 @@ SHEETS = {
         "bill": (251, 220, 168), "no_feet": (3,), "feet_reach": {1: 22},
         "patch": {(1, 2): (1, 3)},
         "cuts": {(5, 3): 659},
+        "extra": {                                   # tiras feitas depois da folha (nome=arquivo.png)
+            "confuso": {"cols": [0, 115, 243, 391, 527, 662, 797, 926, 1063], "src": 113,
+                        # mancha laranja solta em cima da cabeça no 4º quadro (fora do contorno)
+                        "erase": [[(426, 0), (453, 0), (450, 10), (446, 13), (442, 16), (438, 19), (437, 22), (426, 22)]]},
+        },
     },
     "capivara_dev": {
         "cols": [178 + 168 * k for k in range(8)],
@@ -278,13 +286,57 @@ def frames(im, cfg):
     return out
 
 
+def strip_frames(im, ecfg, bill=None):
+    """Tira de uma linha: cada célula sem o fundo, com os pés na borda de baixo do quadro e o personagem
+    no meio (a tira não tem espaçamento regular). Efeitos soltos (tremidinha) ficam dentro do quadro."""
+    W, H = im.size
+    cols, src = ecfg["cols"], ecfg["src"]
+    if ecfg.get("erase"):                    # defeitos da tira: pinta com a cor do fundo do lado
+        from PIL import ImageDraw
+        im = im.copy()
+        draw = ImageDraw.Draw(im)
+        for poly in ecfg["erase"]:
+            x, y = min(p[0] for p in poly), min(p[1] for p in poly)
+            draw.polygon(poly, fill=im.getpixel((max(0, x - 4), y)))
+    out = []
+    for k, x0 in enumerate(cols):
+        x1 = cols[k + 1] if k + 1 < len(cols) else W
+        img, comps = cutout(im, (x0, 0, x1, H), ecfg.get("bg_warm"))
+        main = max(comps, key=len)
+        ground = max(y for _, y in main)
+        left = round(sum(x for x, _ in main) / len(main)) - src // 2
+        top, right = ground - (src - 1), left + src
+        sp, layer = img.load(), Image.new("RGBA", img.size)
+        dst = layer.load()
+        for c in comps:
+            sx = 0
+            if c is not main:
+                xs = [x for x, _ in c]
+                sx = max(0, left + 2 - min(xs)) - max(0, max(xs) - (right - 3))
+            for (x, y) in c:
+                if 0 <= x + sx < img.width:
+                    dst[x + sx, y] = sp[x, y]
+        if bill:
+            feet_like(layer, ground, min(x for x, _ in main), max(x for x, _ in main) + 1,
+                      round(18 * src / 133), bill)
+        out.append(to_canvas(layer, left, top, src))
+    return out
+
+
 def main():
+    args = [a for a in sys.argv[1:] if "=" not in a]
+    extras = dict(a.split("=", 1) for a in sys.argv[1:] if "=" in a)       # nome=tira.png
+    sys.argv[1:] = args
     name, src, dst = sys.argv[1], sys.argv[2], sys.argv[3]
     cfg = SHEETS[name]
     ncols = len(cfg["cols"])
     im = Image.open(src).convert("RGB")
     fr = frames(im, cfg)
     names = [f"{n}{k}" for n in NAMES for k in range(ncols)]
+    for ename, path in extras.items():
+        for k, f in enumerate(strip_frames(Image.open(path).convert("RGB"), cfg["extra"][ename], cfg.get("bill"))):
+            fr[f"{ename}{k}"] = f
+            names.append(f"{ename}{k}")
     mosaic = Image.new("RGB", (SIZE, SIZE * len(names)))
     for i, n in enumerate(names):
         mosaic.paste(fr[n].convert("RGB"), (0, i * SIZE))
@@ -303,7 +355,7 @@ def main():
         f.write(zlib.compress(json.dumps(header).encode() + b"\0" + bytes(data), 9))
     print(dst, len(names), "quadros")
     if len(sys.argv) > 4:                            # prévia: todos os quadros numa grade, fundo verde
-        prev = Image.new("RGBA", (ncols * (SIZE + 4), len(NAMES) * (SIZE + 4)), (40, 200, 90, 255))
+        prev = Image.new("RGBA", (ncols * (SIZE + 4), -(-len(names) // ncols) * (SIZE + 4)), (40, 200, 90, 255))
         for i, n in enumerate(names):
             prev.alpha_composite(fr[n], ((i % ncols) * (SIZE + 4), (i // ncols) * (SIZE + 4)))
         prev.save(sys.argv[4])

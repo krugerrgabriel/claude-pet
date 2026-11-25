@@ -1,10 +1,11 @@
 """Pato de Cachecol: patinho dourado e gordinho de cachecol azul, desenhado a partir de uma folha de sprites.
 
-Os quadros vêm prontos de pato_cachecol.bin (gerado por `tools/folha_para_pet.py pato_cachecol ...` a
-partir da folha de 9 animações x 9 quadros): parado, andando, pensando (balão, reticências, lâmpada),
+Os quadros vêm prontos de pato_cachecol.bin (gerado por `tools/folha_para_pet.py pato_cachecol folha.png ... confuso=tira.png`
+a partir da folha de 9 animações x 9 quadros): parado, andando, pensando (balão, reticências, lâmpada),
 trabalhando (cadeira, mesa e notebook com "</>"), dormindo (zzz), feliz, comemorando (pulo), atenção ("!")
-e pendurado (a mão segurando, olhos tontos). Os efeitos já estão desenhados nos quadros, então nenhum
-efeito do pet vai por cima. O desenho e o crossfade ficam em claude_pet/folha.py.
+e pendurado (a mão segurando, olhos tontos). E, de uma tira à parte, confuso (olho em espiral, tremendo):
+de vez em quando ele larga o que está fazendo e fica confuso (ver Pet._confused). Os efeitos já estão
+desenhados nos quadros, então nenhum efeito do pet vai por cima. O desenho e o crossfade ficam em claude_pet/folha.py.
 """
 from __future__ import annotations
 
@@ -41,6 +42,7 @@ SHEET = {   # animação -> (quadros por segundo, quadros da folha)
     "attention": (6, run("atencao", (0, 1, 2, 4, 5, 6, 7, 8))),
     "waiting": (2, run("feliz", (0, 0, 8, 8))),
     "dangle": (6, run("pendurado", (0, 1, 2, 5, 6, 7, 8))),
+    "confused": (5, run("confuso", ALL)),                      # olho em espiral, treme e volta (tira à parte)
 }
 
 _FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET, FADE)

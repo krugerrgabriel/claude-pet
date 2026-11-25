@@ -45,6 +45,8 @@ class Config:
     # Interação
     notice_radius: float = 110.0      # cursor perto → ele olha / para
     hover_pet_time: float = 1.2       # cursor parado em cima → carinho
+    confused_every: float = 80.0      # personagens com animação "confused": em média a cada tantos
+                                      # segundos (sorteado entre metade e 1,5x) fica confuso; 0 = nunca
 
     extra: dict = field(default_factory=dict)
 

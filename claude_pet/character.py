@@ -76,6 +76,8 @@ class Pet:
         self.happy_until = 0.0
         self.last_activity = time.monotonic()
         self.forced_sleep = False   # "botar pra dormir": fica dormindo até o próximo prompt
+        self.confused_until = 0.0   # tocando a animação "confused" (personagens que têm) até aqui
+        self.next_confused = 0.0    # quando fica confuso de novo (0 = ainda não sorteou)
 
         self.anim = "dangle"
         self.anim_started = time.monotonic()
@@ -234,6 +236,8 @@ class Pet:
                 anim = "dangle"
             elif self.forced_sleep:
                 anim, look = "sleep", 0
+            elif self._confused(now):
+                anim, look = "confused", 0      # para onde está (não anda) até a animação acabar
             else:
                 anim, look = self._behave(dt, now, pointer)
 
@@ -249,6 +253,26 @@ class Pet:
             self.direction = look
         return Frame(int(x), int(y - self.jump), rot, self.anim, frame, look, visual, self.direction,
                      self.lean if self.mode in ("drag", "free") else 0.0)
+
+    def _confused(self, now: float) -> bool:
+        """De vez em quando, do nada, fica confuso: larga o que está fazendo (andar, pensar, trabalhar,
+        até o carinho), toca "confused" uma vez e volta. Só nos personagens que têm essa animação, só
+        parado numa borda (no colo do mouse, caindo ou voando não) e nunca dormindo."""
+        every = self.cfg.confused_every
+        if not every or not self.skin.has_anim("confused"):
+            return False
+        if now < self.confused_until:
+            return True
+        if not self.next_confused:
+            self.next_confused = now + self.rng.uniform(0.5, 1.5) * every
+        if now < self.next_confused:
+            return False
+        self.next_confused = now + self.rng.uniform(0.5, 1.5) * every
+        if self.anim == "sleep":                 # dormindo: deixa pra próxima
+            return False
+        fps, count = self.skin.anim_info("confused")
+        self.confused_until = now + count / fps
+        return True
 
     def _swing(self, dt: float) -> None:
         """Pêndulo: arrastando pra direita, o corpo fica pra trás (inclina pra esquerda) e balança."""

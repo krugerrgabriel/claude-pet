@@ -9,7 +9,8 @@ Um módulo de personagem em chars/ define:
   PACE_THINKING anda de um lado pro outro enquanto pensa
   HIT           (x, y, w, h) área clicável, em pixels lógicos
   PIVOT         (x, y) ponto por onde o mouse "segura" (pêndulo ao arrastar)
-  ANIMS         {animação: (fps, nº de quadros)}
+  ANIMS         {animação: (fps, nº de quadros)}; "confused" é opcional: quem tem, de vez em quando
+                para o que está fazendo e toca ela uma vez (ver Pet._confused e confused_every)
   OVERLAYS      {animação: nome do efeito}            (opcional; padrão em DEFAULT_OVERLAYS)
   OVERLAY_AT    {efeito: (dx, dy)}                    (opcional; desloca o efeito)
   FLIES_WHEN_WORKING  True = trabalhando, sai voando pela tela tocando "work" (opcional)
@@ -78,6 +79,14 @@ class Skin:
 
     def set_smooth(self, on: bool) -> None:
         pass
+
+    def has_anim(self, anim: str) -> bool:
+        """Tem essa animação? (as de ANIM_NAMES todos têm; "confused" é opcional)"""
+        try:
+            self.anim_info(anim)
+        except KeyError:
+            return False
+        return True
 
     @staticmethod
     def pixel_scale(scale: int) -> int:
