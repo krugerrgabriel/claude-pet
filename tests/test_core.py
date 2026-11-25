@@ -265,6 +265,15 @@ class SkinTest(unittest.TestCase):
                             skin.draw(cairo.Context(surf), anim, i, look, "attention", 3, "#5ec4b6",
                                       0.3 if anim == "dangle" else 0.0, facing)
 
+    def test_rest_sits_skin_sits_on_every_pause_on_the_floor(self):
+        from claude_pet import skins
+        for name, want in (("pato_confuso", "sit"), (skins.ROBOT, "stand")):
+            pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skins.load(name))
+            pet._attach_floor()
+            now = time.monotonic()
+            pet.idle_action, pet.action_until, pet.last_activity = "pause", now + 100, now
+            self.assertEqual(pet._behave(1 / 30, now, None), (want, 0), name)
+
     def test_unknown_skin_falls_back_to_robot(self):
         from claude_pet import skins
         self.assertEqual(skins.load("unicornio").name, skins.ROBOT)

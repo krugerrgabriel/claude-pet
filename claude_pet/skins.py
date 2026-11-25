@@ -13,6 +13,7 @@ Um módulo de personagem em chars/ define:
   OVERLAYS      {animação: nome do efeito}            (opcional; padrão em DEFAULT_OVERLAYS)
   OVERLAY_AT    {efeito: (dx, dy)}                    (opcional; desloca o efeito)
   FLIES_WHEN_WORKING  True = trabalhando, sai voando pela tela tocando "work" (opcional)
+  REST_SITS     True = no chão, toda pausa é sentado em vez de em pé (opcional; padrão False)
   render(pen, anim, frame, look, light)  desenha; `light` é a cor do status (a "luzinha")
 """
 from __future__ import annotations
@@ -26,7 +27,7 @@ from . import sprites
 from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 
 ROBOT = "robo"
-ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao"]
+ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso"]
 
 ANIM_NAMES = ["stand", "walk", "sit", "sleep", "curious", "happy", "think", "think_walk", "work",
               "attention", "celebrate", "waiting", "dangle"]
@@ -67,6 +68,7 @@ class Skin:
     hit = (0, 0, CANVAS, CANVAS)
     pivot = (CANVAS // 2, 0)
     pace_thinking = True
+    rest_sits = False
     self_hop = False
     side_view = False
     flies = False          # True = sai voando pela tela enquanto o Claude trabalha
@@ -131,6 +133,7 @@ class CharSkin(Skin):
         self.hit = m.HIT
         self.pivot = m.PIVOT
         self.pace_thinking = getattr(m, "PACE_THINKING", True)
+        self.rest_sits = getattr(m, "REST_SITS", False)
         self.side_view = getattr(m, "SIDE_VIEW", False)
         self.flies = getattr(m, "FLIES_WHEN_WORKING", False)
         self.overlays = {**DEFAULT_OVERLAYS, **getattr(m, "OVERLAYS", {})}

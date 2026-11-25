@@ -21,7 +21,7 @@ class Config:
     # Visual
     pet_name: str = ""             # vazio = "Seu pet" / "Your pet"; muda pelo menu "Mudar nome…"
     language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
-    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato
+    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"

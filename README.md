@@ -60,6 +60,7 @@ Not into robots? Right click → **Character**. Every character does everything 
 | <img src="docs/chars/capivara.gif" width="300"> | **Capivara** (capybara), zen until Claude needs you | Fruit on its head |
 | <img src="docs/chars/pato.gif" width="300"> | **Patinho** (duckling), waddling in a scarf | Scarf around its neck |
 | <img src="docs/chars/dragao.gif" width="300"> | **Dragão** (dragon), takes off and flies around the screen while Claude works | Ember on its chest (and its fire) |
+| <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
 
 ---
 
@@ -171,7 +172,7 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato` or `dragao` (the menu saves it here) |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao` or `pato_confuso` (the menu saves it here) |
 | `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
 | `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
@@ -243,7 +244,7 @@ Removes only Bit's hooks (backing up `settings.json` first), the `claude-pet` co
 ```
 claude-pet/
 ├── claude_pet/          ← the pet (python3 -m claude_pet)
-│   └── chars/           ← gecko, slime, capybara, duckling (one file each)
+│   └── chars/           ← gecko, slime, capybara, duckling, mad duck (one file each)
 ├── hooks/               ← the Claude Code hook
 ├── tests/               ← hook → state → behavior
 ├── tools/               ← sprite previews, review page, README GIFs
