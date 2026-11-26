@@ -233,11 +233,6 @@ class PetCore:
         items.append(("sep",))
         items.append(("radio", t("menu.character"),
                       [(skins.label(n), n == self.skin.name, lambda n=n: self._set_skin(n)) for n in skins.available()]))
-        if self.skin.smoothable:
-            smooth = self.cfg.smooth_for(self.skin.name)
-            items.append(("radio", t("menu.animation"),
-                          [(t("menu.anim_smooth"), smooth, lambda: self._set_smooth(True)),
-                           (t("menu.anim_frames"), not smooth, lambda: self._set_smooth(False))]))
         items.append(("item", t("menu.rename"), self._rename, True))
         chosen = (self.cfg.language or "auto").lower()
         langs = [("auto", t("menu.lang_auto"))] + [(c, i18n.LANGUAGE_NAMES[c]) for c in i18n.LANGUAGES]
@@ -260,15 +255,10 @@ class PetCore:
     def _set_name(self, name: str) -> None:
         self.cfg.save_key("pet_name", name.strip())
 
-    def _set_smooth(self, on: bool) -> None:
-        """Animação suave (crossfade) ou quadro a quadro, guardada por personagem."""
-        self.cfg.save_key("smooth_anim", {**(self.cfg.smooth_anim or {}), self.skin.name: on})
-        self.skin.set_smooth(on)   # vale já no próximo quadro
-
     def _set_skin(self, name: str) -> None:
         if name == self.skin.name:
             return
-        self.skin = skins.load(name, self.cfg.smooth_for(name))
+        self.skin = skins.load(name)
         self.cfg.save_key("skin", name)
         self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
         self.pet.set_skin(self.skin)   # solta e cai de novo no chão

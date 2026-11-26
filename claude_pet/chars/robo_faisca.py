@@ -6,7 +6,7 @@ folha, ">_" no notebook) e `tools/folha_para_pet.py robo_faisca ...` converte.
 As animações: parado, andando, pensando
 (balão, reticências, lâmpada), trabalhando (cadeira, mesa e notebook), dormindo (cabeça caída, zzz), feliz,
 comemorando (pulo com brilho), atenção ("!") e pendurado (olhos tontos). Os efeitos já estão desenhados
-nos quadros, então nenhum efeito do pet vai por cima. O desenho e o crossfade ficam em claude_pet/folha.py.
+nos quadros, então nenhum efeito do pet vai por cima. O desenho fica em claude_pet/folha.py.
 """
 from __future__ import annotations
 
@@ -21,7 +21,6 @@ SELF_HOP = True          # comemorando já pula na folha e atenção é em pé: 
 HIT = (5, 6, 20, 24)
 PIVOT = (15, 2)          # segurado pelo alto do capacete
 OVERLAYS = {a: None for a in ("think", "think_walk", "sleep", "attention", "celebrate", "waiting", "happy")}
-FADE = 3                 # quadros por quadro da folha: ele mesmo + 2 misturas com o próximo (1 = sem crossfade)
 
 ALL = range(9)
 SHEET = {   # animação -> (quadros por segundo, quadros da folha): cada estado do pet com a linha dele
@@ -40,7 +39,6 @@ SHEET = {   # animação -> (quadros por segundo, quadros da folha): cada estado
     "dangle": (6, run("pendurado", ALL)),                     # pendurado (arrastando)
 }
 
-_FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET, FADE)
+_FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET)
 ANIMS = _FOLHA.anims
 render = _FOLHA.render
-set_smooth = _FOLHA.set_smooth     # menu "Animação": suave (crossfade) ou quadro a quadro

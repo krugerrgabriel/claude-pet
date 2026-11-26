@@ -7,7 +7,7 @@ e pendurado (a mão segurando, olhos tontos). E, de uma tira à parte, confuso (
 de vez em quando ele larga o que está fazendo e fica confuso (ver Pet._confused). E chorando, montado
 aqui a partir do dormindo: de vez em quando, com o Claude parado ou esperando você, ele vai pro canto da tela e chora um
 pouco (ver Pet._cry). Os efeitos já estão
-desenhados nos quadros, então nenhum efeito do pet vai por cima. O desenho e o crossfade ficam em claude_pet/folha.py.
+desenhados nos quadros, então nenhum efeito do pet vai por cima. O desenho fica em claude_pet/folha.py.
 """
 from __future__ import annotations
 
@@ -21,10 +21,9 @@ PACE_THINKING = False    # pensa parado, com o balão da folha
 HIT = (7, 7, 20, 23)
 PIVOT = (15, 1)          # segurado pela mão (no "pendurado") / pelo topete
 OVERLAYS = {a: None for a in ("think", "think_walk", "sleep", "attention", "celebrate", "waiting", "happy")}
-FADE = 3                 # quadros por quadro da folha: ele mesmo + 2 misturas com o próximo (1 = sem crossfade)
 
 ALL = range(9)
-# Alguns quadros da folha vieram com defeito e ficam de fora (o crossfade cobre o buraco):
+# Alguns quadros da folha vieram com defeito e ficam de fora:
 #   parado 3 e 6: mancha branca na cabeça / cachecol marrom    feliz 2 a 6: o cachecol some
 #   comemorando 3: topete cortado                             atenção 3: pedaço solto de cachecol
 #   pendurado 3 e 4: borrão laranja / sem cachecol
@@ -96,10 +95,9 @@ def _tears(k):
     return base, flip, paint
 
 
-_FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET, FADE)
+_FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET)
 for _k in range(8):
     _base, _flip, _paint = _tears(_k)
     _FOLHA.derive(f"chorando{_k}", _base, _paint, _flip)
 ANIMS = _FOLHA.anims
 render = _FOLHA.render
-set_smooth = _FOLHA.set_smooth     # menu "Animação": suave (crossfade) ou quadro a quadro

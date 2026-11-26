@@ -34,9 +34,6 @@ STRINGS: dict[str, dict[str, str]] = {
     # menu
     "menu.no_sessions": {"pt": "Nenhuma sessão aberta", "en": "No open sessions"},
     "menu.character": {"pt": "Personagem", "en": "Character"},
-    "menu.animation": {"pt": "Animação", "en": "Animation"},
-    "menu.anim_smooth": {"pt": "Suave (crossfade)", "en": "Smooth (crossfade)"},
-    "menu.anim_frames": {"pt": "Quadro a quadro (sem crossfade)", "en": "Frame by frame (no crossfade)"},
     "menu.troll_on": {"pt": "Ligar modo troll", "en": "Turn on troll mode"},
     "menu.troll_off": {"pt": "Desligar modo troll", "en": "Turn off troll mode"},
     "troll.steal": {"pt": "É meu agora! hehe", "en": "Mine now! hehe"},

@@ -121,7 +121,7 @@ class PetWindow(PetCore, Gtk.Window):
         super().__init__(type=Gtk.WindowType.POPUP)
         self.cfg = cfg
         self.store = store
-        self.skin = skins.load(cfg.skin, cfg.smooth_for(cfg.skin))
+        self.skin = skins.load(cfg.skin)
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         _transparent(self)
         self.set_default_size(self.size, self.size)

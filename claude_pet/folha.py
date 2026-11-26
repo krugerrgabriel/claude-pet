@@ -4,20 +4,11 @@ Cada quadro tem SIZE x SIZE (90: 3 x 3 por pixel lógico do canvas de 30). Na es
 por pixel de tela; nas outras escalas os quadros são reamostrados (pixel mais próximo). O desenho é só
 "cor + retângulo + preencher", igual aos outros personagens, então funciona igual no Linux e no Windows.
 
-Crossfade: entre um quadro da folha e o próximo entram `fade - 1` quadros misturados (o próximo aparecendo
-aos poucos) e a animação roda `fade` vezes mais rápido, então o movimento fica mais fluido sem mudar de
-ritmo. Onde os dois quadros têm desenho, as cores se misturam; onde só um tem, a meia transparência vira
-um pontilhado fino (Bayer 4x4), porque o pet só desenha retângulos de cor sólida.
-
-O crossfade pode ser desligado (`set_smooth(False)`, menu "Animação" > "Quadro a quadro"): aí cada quadro
-da folha aparece puro durante as suas `fade` vezes, então o ritmo é o mesmo, só sem as misturas.
-
 Uso, no módulo do personagem:
 
     _FOLHA = Folha(Path(__file__).with_suffix(".bin"), {"stand": (5, run("parado", (0, 1, 2))), ...})
     ANIMS = _FOLHA.anims
     render = _FOLHA.render
-    set_smooth = _FOLHA.set_smooth
 """
 from __future__ import annotations
 
@@ -26,7 +17,6 @@ import zlib
 from pathlib import Path
 
 N = 30                   # canvas lógico (igual aos outros personagens)
-BAYER = (0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5)
 
 
 def run(name, frames):
@@ -35,7 +25,7 @@ def run(name, frames):
 
 
 class Folha:
-    def __init__(self, path, sheet, fade=3):
+    def __init__(self, path, sheet):
         """sheet: animação -> (quadros por segundo, nomes dos quadros da folha)."""
         raw = zlib.decompress(Path(path).read_bytes())
         head, _, self._pixels = raw.partition(b"\0")
@@ -43,25 +33,10 @@ class Folha:
         self.size = meta["size"]
         self._index = {name: i for i, name in enumerate(meta["frames"])}
         self._pal = [int(c[1:], 16) for c in meta["palette"]]          # 0xRRGGBB
-        self.fade = fade
-        self.smooth = True       # False = sem crossfade (quadro a quadro)
         self._base: dict = {}
         self._cache: dict = {}
-        self.seq = {a: self._crossfade(fps, names) for a, (fps, names) in sheet.items()}
-        self.anims = {a: (fps, len(keys)) for a, (fps, keys) in self.seq.items()}
-
-    def _crossfade(self, fps, names):
-        """Cada quadro vira `fade`: (este, próximo, quanto do próximo) com 0, 1/fade, 2/fade...
-        O quadro puro é sempre (este, este, 0.0), o mesmo que o modo sem crossfade usa (cache em comum)."""
-        keys = []
-        for i, a in enumerate(names):
-            b = names[(i + 1) % len(names)]
-            keys += [(a, b, s / self.fade) if s and b != a else (a, a, 0.0) for s in range(self.fade)]
-        return fps * self.fade, keys
-
-    def set_smooth(self, on):
-        """Liga (padrão) ou desliga o crossfade. O número de quadros e o ritmo não mudam."""
-        self.smooth = bool(on)
+        self.seq = {a: list(names) for a, (fps, names) in sheet.items()}
+        self.anims = {a: (fps, len(names)) for a, (fps, names) in sheet.items()}
 
     def derive(self, name, base, paint, flip=()):
         """Quadro novo `name`, feito em código: o quadro `base` da folha com as caixas `flip` ((x0, y0, x1, y1),
@@ -87,35 +62,13 @@ class Folha:
             got = self._base[name] = [self._pal[v - 1] if v else -1 for v in self._pixels[i:i + n]]
         return got
 
-    def _mixed(self, a, b, t):
-        """Quadro `a` com `t` do quadro `b` por cima: cores misturadas onde os dois têm desenho; onde só um
-        tem, ele aparece no pontilhado (Bayer) na proporção da sua transparência."""
-        pa = self._frame(a)
-        if t == 0:
-            return pa
-        pb, size, u = self._frame(b), self.size, 1 - t
-        out = []
-        for i in range(size * size):
-            ca, cb = pa[i], pb[i]
-            if ca >= 0 and cb >= 0:
-                out.append((round((ca >> 16) * u + (cb >> 16) * t) << 16)
-                           | (round((ca >> 8 & 255) * u + (cb >> 8 & 255) * t) << 8)
-                           | round((ca & 255) * u + (cb & 255) * t))
-            elif ca >= 0 or cb >= 0:
-                alpha = u if ca >= 0 else t
-                y, x = divmod(i, size)
-                out.append(max(ca, cb) if alpha * 16 > BAYER[(y & 3) * 4 + (x & 3)] + 0.5 else -1)
-            else:
-                out.append(-1)
-        return out
-
     def _rects(self, key, px):
         """Retângulos do quadro em `px` pixels de tela por pixel lógico, juntos por cor:
         [(rgb, [(x, y, w, h), ...]), ...]. Faixas iguais em linhas seguidas viram um retângulo só."""
         got = self._cache.get((key, px))
         if got is not None:
             return got
-        pixels, size = self._mixed(*key), self.size
+        pixels, size = self._frame(key), self.size
         side = N * px
         src = [min(size - 1, (2 * i + 1) * size // (2 * side)) for i in range(side)]   # pixel mais próximo
         open_: dict = {}        # (x, w, cor) -> [x, y, w, h] ainda crescendo pra baixo
@@ -153,9 +106,7 @@ class Folha:
     def render(self, pen, anim, frame, look, light):
         cr, px = pen.cr, round(pen.s)
         side = N * px
-        key = self.seq[anim][1][frame]
-        if not self.smooth:
-            key = (key[0], key[0], 0.0)      # só o quadro da folha, sem mistura com o próximo
+        key = self.seq[anim][frame]
         for rgb, rects in self._rects(key, px):
             cr.set_source_rgb(*rgb)
             for (x, y, w, h) in rects:

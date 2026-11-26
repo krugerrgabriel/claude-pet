@@ -20,7 +20,6 @@ Um módulo de personagem em chars/ define:
   SELF_HOP      True = o pulo de "attention"/"celebrate" já está desenhado nos quadros; o pet não pula
                 por conta própria (opcional; padrão False)
   render(pen, anim, frame, look, light)  desenha; `light` é a cor do status (a "luzinha")
-  set_smooth(on) liga/desliga o crossfade entre quadros (opcional; quem tem ganha o menu "Animação")
 """
 from __future__ import annotations
 
@@ -54,11 +53,10 @@ def label(name: str) -> str:
     return importlib.import_module(f".chars.{name}", __package__).LABEL
 
 
-def load(name: str = ROBOT, smooth: bool = True) -> "Skin":
-    """`smooth`: animação suave (crossfade) nos personagens que têm essa opção."""
+def load(name: str = ROBOT) -> "Skin":
     if name == ROBOT or name not in available():
         return RobotSkin()
-    return CharSkin(name, smooth)
+    return CharSkin(name)
 
 
 def status_light(status: str) -> str:
@@ -79,10 +77,6 @@ class Skin:
     self_hop = False
     side_view = False
     flies = False          # True = sai voando pela tela enquanto o Claude trabalha
-    smoothable = False     # tem animação suave (crossfade) que dá pra desligar
-
-    def set_smooth(self, on: bool) -> None:
-        pass
 
     def has_anim(self, anim: str) -> bool:
         """Tem essa animação? (as de ANIM_NAMES todos têm; "confused" é opcional)"""
@@ -145,7 +139,7 @@ class RobotSkin(Skin):
 
 
 class CharSkin(Skin):
-    def __init__(self, name: str, smooth: bool = True):
+    def __init__(self, name: str):
         self.name = name
         self.mod = importlib.import_module(f".chars.{name}", __package__)
         m = self.mod
@@ -158,12 +152,6 @@ class CharSkin(Skin):
         self.flies = getattr(m, "FLIES_WHEN_WORKING", False)
         self.overlays = {**DEFAULT_OVERLAYS, **getattr(m, "OVERLAYS", {})}
         self.overlay_at = getattr(m, "OVERLAY_AT", {})
-        self.smoothable = hasattr(m, "set_smooth")
-        self.set_smooth(smooth)   # o módulo fica carregado entre um load e outro: sempre reaplica
-
-    def set_smooth(self, on: bool) -> None:
-        if self.smoothable:
-            self.mod.set_smooth(on)
 
     def anim_info(self, anim: str) -> tuple[float, int]:
         return self.mod.ANIMS[anim]

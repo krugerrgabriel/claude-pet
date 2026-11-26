@@ -65,7 +65,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev**, de fone, óculos e notebook, também de folha de sprites | Sem luzinha: cada estado tem a sua cena |
 | <img src="docs/chars/robo_faisca.gif" width="300"> | **Robô Faísca**, robozinho azul e vermelho, de olhos azul-claros, crista listrada e duas antenas laterais, também de folha de sprites | Sem luzinha: cada estado tem a sua cena |
 
-Os personagens de folha de sprites passam de um quadro pro outro com uma transição suave (crossfade). Prefere quadro a quadro? Botão direito → **Animação** → **Quadro a quadro** (a escolha é de cada personagem). Pra criar um a partir da sua própria folha, veja `tools/folha_para_pet.py`.
+Pra criar um personagem a partir da sua própria folha de sprites, veja `tools/folha_para_pet.py`.
 
 ---
 
@@ -180,7 +180,6 @@ Só se quiser: tudo funciona sem configurar nada.
 | Chave | Significado |
 |---|---|
 | `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` ou `robo_faisca` (o menu grava aqui) |
-| `smooth_anim` | Animação suave por personagem de folha de sprites: `{"pato_cachecol": false}` = quadro a quadro; o menu **Animação** grava aqui |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
 | `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
