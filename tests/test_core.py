@@ -315,7 +315,7 @@ class ConfusedTest(unittest.TestCase):
         pet.next_confused = self.t[0]
         where = pet.position()
         fps, n = pet.skin.anim_info("confused")
-        self.assertEqual(set(self.step(pet, seconds=n / fps - 0.1)), {"confused"})
+        self.assertEqual(set(self.step(pet, seconds=3 * n / fps - 0.1)), {"confused"})   # 3 vezes seguidas
         self.assertEqual(pet.position(), where)               # parou onde estava
         self.assertEqual(self.step(pet, seconds=0.5)[-1], "walk")   # acabou: volta a andar
         self.assertGreater(pet.next_confused, self.t[0] + 30)       # a próxima já está sorteada
