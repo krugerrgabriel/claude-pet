@@ -50,7 +50,7 @@ Você manda o prompt, o Claude Code começa a trabalhar e você vai fazer outra 
 
 ### 🐾 Escolha seu bichinho
 
-Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit faz (andar no teto, pensar, digitar, pedir atenção, comemorar, dormir, balançar no arraste) e mostram o status pela cor de um detalhe:
+Não curtiu robô? Botão direito → **Configurações…** e escolha outro. Todos fazem tudo que o Bit faz (andar no teto, pensar, digitar, pedir atenção, comemorar, dormir, balançar no arraste) e mostram o status pela cor de um detalhe:
 
 | | Personagem | Onde fica a "luzinha" do status |
 |---|---|---|
@@ -81,7 +81,7 @@ Pra criar um personagem a partir da sua própria folha de sprites, veja `tools/f
 | 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura. Jogado contra a borda que encosta em outro monitor, atravessa pra ele |
 | 💤 **Humores** | Repara no seu cursor, gosta de carinho ❤, dorme quando nada está acontecendo |
 | ⌨️ **Digita junto** | Com o Claude parado, se você está digitando, ele digita junto no notebook. Funciona até sem o Claude Code |
-| 😈 **Modo troll** | Desligado por padrão; liga pelo menu. De vez em quando ele rouba o cursor e sai correndo com ele, ou se pendura nele e deixa o mouse pesado. Nunca com botão do mouse apertado nem quando o Claude precisa de você, e um puxão forte faz ele largar |
+| 😈 **Modo troll** | Desligado por padrão; liga nas **Configurações**. De vez em quando ele rouba o cursor e sai correndo com ele, ou se pendura nele e deixa o mouse pesado. Nunca com botão do mouse apertado nem quando o Claude precisa de você, e um puxão forte faz ele largar |
 | 👻 **Nunca atrapalha** | O clique atravessa tudo menos o próprio Bit. Dá pra esconder por 30 min ou 2 h no menu |
 | 🧹 **Se limpa sozinho** | Sessões cujo processo `claude` morreu são esquecidas automaticamente |
 | 🪶 **Leve** | Biblioteca padrão + o GTK que já vem no seu desktop. Só redesenha quando o quadro muda |
@@ -151,7 +151,7 @@ Pronto. 🎉 Abra uma sessão nova do Claude Code e veja ele em ação.
 | **Passar o mouse** (mesmo rapidinho) pelo bichinho ou pelo balão, quando terminou | Dispensa o balão de "terminou" e o ✓ (um clique logo depois ainda abre o terminal) |
 | **Deixar o mouse parado em cima** | Carinho ❤ |
 | **Arrastar e soltar** | Pega ele, balança, arremessa (até pro outro monitor) |
-| **Botão direito** | Lista de chats (clique pra focar), **Personagem**, **Mudar nome…**, **Idioma** (automático, português ou inglês), **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
+| **Botão direito** | Lista de chats (clique pra focar), **Configurações…** (personagem, nome, idioma e modo troll numa janela só), **Botar pra dormir** (dorme até o seu próximo prompt ou um pedido de permissão), esconder por 30 min / 2 h, sair |
 
 ---
 
@@ -179,9 +179,9 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` ou `robo_faisca` (o menu grava aqui) |
-| `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
-| `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` ou `robo_faisca` (a janela de **Configurações** grava aqui) |
+| `pet_name` | Nome usado nos balões (vazio = "Seu pet"; a janela de **Configurações** grava aqui) |
+| `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; a janela de **Configurações** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
 | `body_color` | Qualquer cor pro corpo do Bit (só o robô) |
 | `walk_speed` | Pixels por segundo |

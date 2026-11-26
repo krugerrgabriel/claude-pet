@@ -117,7 +117,6 @@ class TkPetApp(PetCore):
         self._init_core()
         self._drawn_key = None
         self._images: dict = {}
-        self._rename_win = None
 
         for w in (self.root, self.label):
             w.bind("<ButtonPress-1>", self._on_press)
@@ -299,42 +298,6 @@ class TkPetApp(PetCore):
         return menu
 
     # ------------------------------------------------------------ ações
-    def _rename(self) -> None:
-        """Janelinha pra escolher o nome do pet. Vazio = "Seu pet"."""
-        if self._rename_win is not None:
-            self._rename_win.lift()
-            return
-        win = tk.Toplevel(self.root)
-        self._rename_win = win
-        win.title(t("rename.title"))
-        win.attributes("-topmost", True)
-        win.resizable(False, False)
-        frame = tk.Frame(win, padx=12, pady=10)
-        frame.pack()
-        tk.Label(frame, text=t("rename.question"), anchor="w").pack(fill="x")
-        entry = tk.Entry(frame, width=28)
-        entry.insert(0, self.cfg.pet_name or "")
-        entry.pack(fill="x", pady=(6, 10))
-        buttons = tk.Frame(frame)
-        buttons.pack(anchor="e")
-
-        def close() -> None:
-            self._rename_win = None
-            win.destroy()
-
-        def save(_ev=None) -> None:
-            self._set_name(entry.get()[:24])
-            close()
-
-        tk.Button(buttons, text=t("rename.cancel"), command=close).pack(side="left", padx=(0, 6))
-        tk.Button(buttons, text=t("rename.save"), command=save, default="active").pack(side="left")
-        entry.bind("<Return>", save)
-        win.bind("<Escape>", lambda _e: close())
-        win.protocol("WM_DELETE_WINDOW", close)
-        px, py = self._pointer() or (200, 200)
-        win.geometry(f"+{int(px) - 120}+{int(py) - 60}")
-        win.after(50, lambda: (win.focus_force(), entry.focus_set(), entry.select_range(0, "end")))
-
     def _apply_skin(self) -> None:
         self.photo = tk.PhotoImage(width=self.size, height=self.size)
         self.label.configure(image=self.photo)

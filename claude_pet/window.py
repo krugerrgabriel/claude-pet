@@ -339,28 +339,6 @@ class PetWindow(PetCore, Gtk.Window):
     def _quit(self) -> None:
         Gtk.main_quit()
 
-    def _rename(self) -> None:
-        """Janelinha pra escolher o nome do pet. Vazio = "Seu pet"."""
-        dlg = Gtk.Dialog(title=t("rename.title"))
-        dlg.add_buttons(t("rename.cancel"), Gtk.ResponseType.CANCEL, t("rename.save"), Gtk.ResponseType.OK)
-        dlg.set_default_response(Gtk.ResponseType.OK)
-        dlg.set_keep_above(True)
-        dlg.set_position(Gtk.WindowPosition.MOUSE)
-        dlg.set_resizable(False)
-        box = dlg.get_content_area()
-        box.set_border_width(12)
-        box.set_spacing(8)
-        box.add(Gtk.Label(label=t("rename.question"), xalign=0))
-        entry = Gtk.Entry(text=self.cfg.pet_name or "", placeholder_text=t("default_name"), max_length=24,
-                          activates_default=True)
-        box.add(entry)
-        dlg.show_all()
-        response = dlg.run()   # o loop do pet continua rodando enquanto a janelinha está aberta
-        name = entry.get_text().strip()
-        dlg.destroy()
-        if response == Gtk.ResponseType.OK:
-            self._set_name(name)
-
     def _apply_skin(self) -> None:
         self.resize(self.size, self.size)
         self._shape_rot = None         # recalcula a área clicável no próximo tick

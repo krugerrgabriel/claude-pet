@@ -569,11 +569,10 @@ class WindowsPortTest(unittest.TestCase):
         f.cfg = Config()
         f.skin = skins.load("pato")
         f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        from claude_pet.i18n import t
         model = f.menu_model()
-        kinds = [e[0] for e in model]
-        self.assertEqual(kinds.count("radio"), 2)   # personagem e idioma
-        chars = next(e for e in model if e[0] == "radio")[2]
-        self.assertEqual([c[1] for c in chars].count(True), 1)
+        self.assertNotIn("radio", [e[0] for e in model])   # personagem, nome, idioma: tudo nas Configurações
+        self.assertIn(t("menu.settings"), [e[1] for e in model if e[0] == "item"])
         self.assertTrue(all(e[2] for e in model if e[0] == "item" and e[3]))
 
     def test_sprite_sheet_frames_play_pure_without_animation_menu(self):
@@ -593,7 +592,7 @@ class WindowsPortTest(unittest.TestCase):
         f._init_core()
         f.cfg, f.skin = Config(), skin
         f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1), skin=skin)
-        self.assertEqual([e[0] for e in f.menu_model()].count("radio"), 2)   # personagem e idioma
+        self.assertNotIn("radio", [e[0] for e in f.menu_model()])   # sem menu "Animação"
 
 
 class WorksAlongTest(unittest.TestCase):
@@ -732,23 +731,66 @@ class TrollTest(unittest.TestCase):
         tr.tick(now + 0.03, 0.03, (pointer[0] + 400, pointer[1] - 300), "idle", False, False)
         self.assertFalse(tr.active)
 
-    def test_menu_toggles_troll_mode(self):
+    def test_settings_window_changes_reach_the_pet(self):
+        """A janela de Configurações grava no config.json; o pet percebe e aplica personagem e modo troll."""
+        from claude_pet import config as C, skins
         from claude_pet.core import PetCore
-        from claude_pet.i18n import t
 
         class Fake(PetCore):
-            pass
+            def _apply_skin(self):
+                self.applied = True
 
-        f = Fake()
-        f._init_core()
-        f.cfg, f.skin = Config(), __import__("claude_pet.skins", fromlist=["load"]).load()
-        f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
-        labels = [i[1] for i in f.menu_model() if i[0] == "item"]
-        self.assertIn(t("menu.troll_on"), labels)
-        f._toggle_troll()
-        self.assertTrue(f.troll.on)
-        labels = [i[1] for i in f.menu_model() if i[0] == "item"]
-        self.assertIn(t("menu.troll_off"), labels)
+        orig = C.CONFIG_FILE
+        with tempfile.TemporaryDirectory() as tmp:
+            C.CONFIG_FILE = Path(tmp) / "config.json"
+            import claude_pet.core as core
+            core_orig, core.CONFIG_FILE = core.CONFIG_FILE, C.CONFIG_FILE
+            try:
+                f = Fake()
+                f._init_core()
+                f.cfg, f.skin = Config(), skins.load()
+                f.pet = Pet(f.cfg, Rect(0, 0, 1920, 1080), rng=random.Random(1))
+                f._watch_config(100.0)
+                self.assertFalse(f.troll.on)
+                other = Config.load()                    # "a janela" grava
+                other.save_key("skin", "pato")
+                other.save_key("troll", True)
+                other.save_key("pet_name", "Jorge")
+                os.utime(C.CONFIG_FILE, (1, 1))          # garante mtime diferente
+                f._watch_config(101.0)
+                self.assertEqual(f.skin.name, "pato")
+                self.assertTrue(getattr(f, "applied", False))
+                self.assertTrue(f.troll.on)
+                self.assertEqual(f.cfg.display_name, "Jorge")
+            finally:
+                C.CONFIG_FILE = orig
+                core.CONFIG_FILE = core_orig
+
+    @unittest.skipUnless(os.environ.get("DISPLAY") or os.name == "nt", "precisa de tela")
+    def test_settings_window_builds_and_saves(self):
+        from claude_pet import config as C
+        try:
+            import tkinter  # noqa: F401
+        except ImportError:
+            self.skipTest("sem tkinter")
+        from claude_pet import settings
+        orig = C.CONFIG_FILE
+        with tempfile.TemporaryDirectory() as tmp:
+            C.CONFIG_FILE = settings.Config.__module__ and Path(tmp) / "config.json"
+            import claude_pet.config as cfgmod
+            cfgmod.CONFIG_FILE = C.CONFIG_FILE
+            try:
+                app = settings.SettingsApp()
+                app.root.withdraw()
+                self.assertGreaterEqual(len(app.cards), 5)
+                app.choose_skin("capivara")
+                app.choose_troll(True)
+                data = json.loads(C.CONFIG_FILE.read_text())
+                self.assertEqual((data["skin"], data["troll"]), ("capivara", True))
+                app.root.destroy()
+            finally:
+                C.CONFIG_FILE = orig
+                cfgmod.CONFIG_FILE = orig
 
 
 class CrossesTest(unittest.TestCase):

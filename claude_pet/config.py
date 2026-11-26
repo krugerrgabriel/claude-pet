@@ -20,6 +20,7 @@ CONFIG_FILE = Path(os.environ.get("CLAUDE_PET_CONFIG", Path.home() / ".config" /
 class Config:
     # Visual
     pet_name: str = ""             # vazio = "Seu pet" / "Your pet"; muda pelo menu "Mudar nome…"
+    troll: bool = False            # modo troll (Configurações): o pet rouba o cursor de vez em quando
     language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
     skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, pato_cachecol, capivara_dev, robo_faisca
     scale: int = 3                 # tamanho de cada "pixel" do sprite

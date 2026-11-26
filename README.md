@@ -50,7 +50,7 @@ You send a prompt, Claude Code starts working, and you go do something else. The
 
 ### 🐾 Pick your pet
 
-Not into robots? Right click → **Character**. Every character does everything Bit does (walking on the ceiling, thinking, typing, asking for you, celebrating, sleeping, swinging when dragged) and shows the status through the color of one detail:
+Not into robots? Right click → **Settings…** and pick another one. Every character does everything Bit does (walking on the ceiling, thinking, typing, asking for you, celebrating, sleeping, swinging when dragged) and shows the status through the color of one detail:
 
 | | Character | Where the status "light" is |
 |---|---|---|
@@ -81,7 +81,7 @@ To make a character from your own sprite sheet, see `tools/folha_para_pet.py`.
 | 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held. Throw him at an edge shared with another monitor and he flies across |
 | 💤 **Moods** | Notices your cursor, enjoys being petted ❤, sleeps when nothing is happening |
 | ⌨️ **Types along** | While Claude is idle, if you're typing, he types along on his laptop. Works even without Claude Code |
-| 😈 **Troll mode** | Off by default; turn it on from the menu. Every so often he steals your cursor and runs off with it, or hangs from it and makes the mouse heavy. Never while a mouse button is held or when Claude needs you, and a hard yank makes him let go |
+| 😈 **Troll mode** | Off by default; turn it on in **Settings**. Every so often he steals your cursor and runs off with it, or hangs from it and makes the mouse heavy. Never while a mouse button is held or when Claude needs you, and a hard yank makes him let go |
 | 👻 **Never in the way** | Clicks go through everything except Bit himself. Hide him for 30 min or 2 h from the menu |
 | 🧹 **Self-cleaning** | Sessions whose `claude` process died are forgotten automatically |
 | 🪶 **Lightweight** | Standard library + the GTK that already ships with your desktop. Redraws only when the frame changes |
@@ -151,7 +151,7 @@ Done. 🎉 Open a new Claude Code session and watch him go.
 | **Hover** (even a quick pass) over the pet or the bubble, when done | Dismisses the "done" bubble and the ✓ (a click right after still opens the terminal) |
 | **Hover and wait** | Petting ❤ |
 | **Drag and release** | Pick him up, swing him around, throw him (even onto your other monitor) |
-| **Right click** | List of chats (click one to focus it), **character**, **rename**, **language** (automatic, Portuguese or English), **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
+| **Right click** | List of chats (click one to focus it), **Settings…** (character, name, language and troll mode in one window), **put to sleep** (sleeps until your next prompt or a permission request), hide for 30 min / 2 h, quit |
 
 ---
 
@@ -179,9 +179,9 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` or `robo_faisca` (the menu saves it here) |
-| `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
-| `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` or `robo_faisca` (the **Settings** window saves it here) |
+| `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Settings** window saves it here) |
+| `language` | `auto` (follows the system language), `pt` or `en`; the **Settings** window saves it here |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
 | `body_color` | Any color for Bit's body (robot only) |
 | `walk_speed` | Pixels per second |

@@ -9,10 +9,15 @@ self.skin, self.size, `_pointer()`, `_apply_skin()`, `_hide_for(min)` e `_quit()
 from __future__ import annotations
 
 import math
+import subprocess
+import sys
 import time
+from dataclasses import fields
+from pathlib import Path
 
 from . import focus, i18n, skins
 from .character import Frame
+from .config import CONFIG_FILE, Config
 from .i18n import t
 from .state import Session
 from .troll import Troll
@@ -99,6 +104,7 @@ class PetCore:
             self.sessions = self.store.sessions()
             self.top = self.sessions[0] if self.sessions else None
             self._maybe_wake()
+        self._watch_config(now)
 
     def _dismiss_done_on_hover(self, pointer, now: float) -> None:
         """Mouse passou (mesmo rapidinho) pelo pet ou pelo balão = "vi que terminou": some o balão e o ✓."""
@@ -140,9 +146,6 @@ class PetCore:
         x, y = int(round(want[0])), int(round(want[1]))
         self._warp_pointer(x, y)
         return float(x), float(y)
-
-    def _toggle_troll(self) -> None:
-        self.troll.enable(not self.troll.on, time.monotonic())
 
     # ------------------------------------------------------------ dormir
     def _sleep(self) -> None:
@@ -231,44 +234,63 @@ class PetCore:
         else:
             items.append(("item", t("menu.no_sessions"), None, False))
         items.append(("sep",))
-        items.append(("radio", t("menu.character"),
-                      [(skins.label(n), n == self.skin.name, lambda n=n: self._set_skin(n)) for n in skins.available()]))
-        items.append(("item", t("menu.rename"), self._rename, True))
-        chosen = (self.cfg.language or "auto").lower()
-        langs = [("auto", t("menu.lang_auto"))] + [(c, i18n.LANGUAGE_NAMES[c]) for c in i18n.LANGUAGES]
-        items.append(("radio", t("menu.language"),
-                      [(label, code == chosen, lambda c=code: self._set_language(c)) for code, label in langs]))
+        items.append(("item", t("menu.settings"), self._open_settings, True))
         if self.pet.forced_sleep:
             items.append(("item", t("menu.wake"), self._wake, True))
         else:
             items.append(("item", t("menu.sleep"), self._sleep, True))
-        items.append(("item", t("menu.troll_off" if self.troll.on else "menu.troll_on"), self._toggle_troll, True))
         items.append(("item", t("menu.hide_30"), lambda: self._hide_for(30), True))
         items.append(("item", t("menu.hide_2h"), lambda: self._hide_for(120), True))
         items.append(("item", t("menu.quit"), self._quit, True))
         return items
 
-    def _set_language(self, code: str) -> None:
-        self.cfg.save_key("language", code)
-        i18n.set_language(code)   # balão e menu já saem no idioma novo
+    def _open_settings(self) -> None:
+        """Abre a janela de Configurações (processo próprio, em Tk). Já aberta: não abre outra."""
+        proc = getattr(self, "_settings_proc", None)
+        if proc is not None and proc.poll() is None:
+            return
+        root = Path(__file__).resolve().parent.parent
+        try:
+            self._settings_proc = subprocess.Popen([sys.executable, "-m", "claude_pet.settings"], cwd=str(root))
+        except OSError:
+            self._settings_proc = None
 
-    def _set_name(self, name: str) -> None:
-        self.cfg.save_key("pet_name", name.strip())
+    # ------------------------------------------------------------ config.json mudou (janela de Configurações)
+    def _watch_config(self, now: float) -> None:
+        if now - getattr(self, "_cfg_checked", 0.0) < 0.5:
+            return
+        self._cfg_checked = now
+        try:
+            mtime = CONFIG_FILE.stat().st_mtime
+        except OSError:
+            mtime = None
+        first = not hasattr(self, "_cfg_mtime")
+        if not first and mtime == self._cfg_mtime:
+            return
+        self._cfg_mtime = mtime
+        if not first:
+            fresh = Config.load()
+            for f in fields(Config):
+                setattr(self.cfg, f.name, getattr(fresh, f.name))
+        self._apply_config()
 
-    def _set_skin(self, name: str) -> None:
-        if name == self.skin.name:
+    def _apply_config(self) -> None:
+        """Aplica no pet o que pode ter mudado: personagem, idioma e modo troll (o nome é lido na hora)."""
+        i18n.set_language(self.cfg.language)
+        self._use_skin(self.cfg.skin)
+        if bool(self.cfg.troll) != self.troll.on:
+            self.troll.enable(bool(self.cfg.troll), time.monotonic())
+
+    def _use_skin(self, name: str) -> None:
+        if name not in skins.available() or name == self.skin.name:
             return
         self.skin = skins.load(name)
-        self.cfg.save_key("skin", name)
         self.size = self.skin.canvas * self.skin.pixel_scale(self.cfg.scale)
         self.pet.set_skin(self.skin)   # solta e cai de novo no chão
         self._apply_skin()
 
     # ------------------------------------------------------------ cada toolkit implementa
     def _pointer(self):
-        raise NotImplementedError
-
-    def _rename(self) -> None:
         raise NotImplementedError
 
     def _apply_skin(self) -> None:
