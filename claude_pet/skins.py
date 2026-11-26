@@ -32,7 +32,7 @@ from . import sprites
 from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 
 ROBOT = "robo"
-ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "pato_cachecol", "capivara_dev", "robo_faisca"]
+ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "capivara_dev"]
 
 ANIM_NAMES = ["stand", "walk", "sit", "sleep", "curious", "happy", "think", "think_walk", "work",
               "attention", "celebrate", "waiting", "dangle"]

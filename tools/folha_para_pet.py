@@ -42,21 +42,6 @@ HANG = 8                         # a linha do "pendurado": alinha pela mão, em 
 #                          na linha de comando, `nome=tira.png`. Cada quadro fica com os pés no chão e
 #                          centrado no personagem; src é na escala da tira (pra ele sair do mesmo tamanho).
 SHEETS = {
-    "pato_cachecol": {
-        "cols": [145 + 150 * k for k in range(9)],
-        "rows": [0, 117, 231, 352, 468, 566, 668, 770, 878, 1024],
-        "src": 133,
-        "feet": [111, 112, 115, 111, 94, 94, 96, 105, None], "cx": 71, "hand_top": 2,
-        "fixed": (3, 8),
-        "bill": (251, 220, 168), "no_feet": (3,), "feet_reach": {1: 22},
-        "patch": {(1, 2): (1, 3)},
-        "cuts": {(5, 3): 659},
-        "extra": {                                   # tiras feitas depois da folha (nome=arquivo.png)
-            "confuso": {"cols": [0, 115, 243, 391, 527, 662, 797, 926, 1063], "src": 113,
-                        # mancha laranja solta em cima da cabeça no 4º quadro (fora do contorno)
-                        "erase": [[(426, 0), (453, 0), (450, 10), (446, 13), (442, 16), (438, 19), (437, 22), (426, 22)]]},
-        },
-    },
     "capivara_dev": {
         "cols": [178 + 168 * k for k in range(8)],
         "rows": [0, 115, 225, 345, 460, 562, 657, 756, 862, 1024],
@@ -64,12 +49,6 @@ SHEETS = {
         "fixed": (3, 8), "center_fixed": True,
         "bg_warm": 3,
         "cuts": {(7, k): 863 for k in range(8)},     # a mão do "pendurado" encosta nos pés da "atenção"
-    },
-    "robo_faisca": {                                 # a folha já passada por tools/repinta_faisca.py
-        "cols": [163, 312, 473, 623, 786, 955, 1116, 1274, 1423],
-        "rows": [0, 115, 228, 343, 457, 560, 658, 761, 882, 1024],
-        "src": 140,
-        "fixed": (3, 8), "center_fixed": True,
     },
 }
 MARGIN = 45                      # quanto além da célula procurar pedaços dela (balão, pulo)
