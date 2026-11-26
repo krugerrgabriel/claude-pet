@@ -556,6 +556,60 @@ class WindowsPortTest(unittest.TestCase):
                 skins.load("pato_cachecol")                      # volta o módulo pro padrão
 
 
+class WorksAlongTest(unittest.TestCase):
+    """Com o Claude parado e você digitando = o pet digita junto."""
+
+    def fake(self, **cfg):
+        from claude_pet import skins
+        from claude_pet.core import PetCore
+
+        class Fake(PetCore):
+            keys = 0
+
+            def _keys_down(self):
+                return self.keys
+
+        f = Fake()
+        f._init_core()
+        f.cfg = Config(**cfg)
+        f.skin = skins.load("pato")
+        f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        return f
+
+    def type_keys(self, f, t, n, first_bit=0):
+        """Aperta e solta n teclas, uma a cada 0,2 s; devolve o tempo depois da última."""
+        for k in range(n):
+            f.keys = 1 << (first_bit + k)
+            f._pet_status(t)
+            f.keys = 0
+            f._pet_status(t + 0.05)
+            t += 0.2
+        return t
+
+    def test_typing_needs_a_few_keys_and_holds_after_the_last(self):
+        from claude_pet.core import TYPE_HOLD, TYPE_KEYS
+        f = self.fake()
+        t = self.type_keys(f, 100.0, TYPE_KEYS - 1)          # um atalho (Ctrl+Shift+T) não é digitar
+        self.assertEqual(f._pet_status(t), "idle")
+        t = self.type_keys(f, t, 1, first_bit=10) - 0.2
+        self.assertEqual(f._pet_status(t), "working")
+        self.assertEqual(f._pet_status(t + TYPE_HOLD - 0.5), "working")   # pausa entre palavras
+        self.assertEqual(f._pet_status(t + TYPE_HOLD + 0.5), "idle")
+
+    def test_holding_a_key_counts_once(self):
+        f = self.fake()
+        f.keys = 1
+        for i in range(30):
+            f._pet_status(200.0 + i * 0.05)
+        self.assertEqual(f._pet_status(202.0), "idle")
+
+    def test_can_be_turned_off(self):
+        from claude_pet.core import TYPE_KEYS
+        f = self.fake(type_along=False)
+        t = self.type_keys(f, 300.0, TYPE_KEYS + 2)
+        self.assertEqual(f._pet_status(t), "idle")
+
+
 class CrossesTest(unittest.TestCase):
     def test_fast_pass_over_rect_counts(self):
         from claude_pet.window import _crosses

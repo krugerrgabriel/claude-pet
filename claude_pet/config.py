@@ -48,6 +48,9 @@ class Config:
     confused_every: float = 80.0      # personagens com animação "confused": em média a cada tantos
                                       # segundos (sorteado entre metade e 1,5x) fica confuso; 0 = nunca
 
+    # Com o Claude parado, o pet digita junto com você
+    type_along: bool = True           # você digitando → pet digita junto (só vê SE tem tecla apertada, nunca qual)
+
     extra: dict = field(default_factory=dict)
 
     @property

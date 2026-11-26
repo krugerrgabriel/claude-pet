@@ -80,6 +80,7 @@ Os personagens de folha de sprites passam de um quadro pro outro com uma transi�
 | 🧗 **Anda por tudo** | Chão, paredes e teto do monitor, respeitando a dock e a barra do topo |
 | 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura. Jogado contra a borda que encosta em outro monitor, atravessa pra ele |
 | 💤 **Humores** | Repara no seu cursor, gosta de carinho ❤, dorme quando nada está acontecendo |
+| ⌨️ **Digita junto** | Com o Claude parado, se você está digitando, ele digita junto no notebook. Funciona até sem o Claude Code |
 | 👻 **Nunca atrapalha** | O clique atravessa tudo menos o próprio Bit. Dá pra esconder por 30 min ou 2 h no menu |
 | 🧹 **Se limpa sozinho** | Sessões cujo processo `claude` morreu são esquecidas automaticamente |
 | 🪶 **Leve** | Biblioteca padrão + o GTK que já vem no seu desktop. Só redesenha quando o quadro muda |
@@ -189,6 +190,7 @@ Só se quiser: tudo funciona sem configurar nada.
 | `done_linger` | Segundos que o "terminou ✓" fica se você não clicar |
 | `work_hold` | Segundos mínimos em "trabalhando" depois de uma ferramenta, pra não ficar piscando entre pensar e trabalhar (padrão 5) |
 | `monitor` | Índice do monitor, `-1` = principal |
+| `type_along` | `true` (padrão): com o Claude parado e você digitando, ele digita junto |
 | `confused_every` | Personagens com animação de confuso (Pato de Cachecol): em média a cada tantos segundos ele larga o que está fazendo e fica confuso (padrão 80; nunca dormindo; `0` desliga) |
 
 Todas as chaves são opcionais. Reinicie o Bit depois de editar.
@@ -267,6 +269,7 @@ claude-pet/
 
 - Tudo fica na sua máquina. **Nenhuma chamada de rede.**
 - O hook guarda só o status da sessão, o nome da ferramenta, a pasta de trabalho e o PID do `claude`. **Nunca seus prompts ou seu código.**
+- Pra digitar junto, o pet só olha **se** tem tecla apertada, nunca **qual**: não guarda nem registra nada do teclado. Desliga com `"type_along": false`.
 - O instalador faz backup do `settings.json` antes de mexer e só adiciona ou remove as entradas do próprio Bit.
 
 ---

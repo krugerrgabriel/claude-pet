@@ -80,6 +80,7 @@ The sprite sheet characters move from one frame to the next with a smooth transi
 | 🧗 **Walks everywhere** | Floor, walls and ceiling of your monitor, respecting the dock and top bar |
 | 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held. Throw him at an edge shared with another monitor and he flies across |
 | 💤 **Moods** | Notices your cursor, enjoys being petted ❤, sleeps when nothing is happening |
+| ⌨️ **Types along** | While Claude is idle, if you're typing, he types along on his laptop. Works even without Claude Code |
 | 👻 **Never in the way** | Clicks go through everything except Bit himself. Hide him for 30 min or 2 h from the menu |
 | 🧹 **Self-cleaning** | Sessions whose `claude` process died are forgotten automatically |
 | 🪶 **Lightweight** | Standard library + the GTK that already ships with your desktop. Redraws only when the frame changes |
@@ -189,6 +190,7 @@ Only if you want to: everything works out of the box.
 | `done_linger` | Seconds the "done ✓" stays if you don't click him |
 | `work_hold` | Minimum seconds he stays "working" after a tool runs, so he doesn't flicker between thinking and working (default 5) |
 | `monitor` | Monitor index, `-1` = primary |
+| `type_along` | `true` (default): while Claude is idle and you're typing, he types along |
 | `confused_every` | Characters with a confused animation (Scarf Duck): on average every this many seconds he drops what he's doing and gets confused (default 80; never while asleep; `0` turns it off) |
 
 All keys are optional. Restart Bit after editing.
@@ -267,6 +269,7 @@ claude-pet/
 
 - Everything stays on your machine. **No network calls.**
 - The hook stores only the session status, the tool name, the working directory and the `claude` process id. **Never your prompts or code.**
+- To type along, the pet only checks **whether** a key is down, never **which** one: nothing from the keyboard is stored or logged. Turn it off with `"type_along": false`.
 - The installer backs up `settings.json` before touching it and only adds or removes Bit's own entries.
 
 ---
