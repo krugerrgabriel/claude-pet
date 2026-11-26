@@ -343,6 +343,73 @@ class ConfusedTest(unittest.TestCase):
             self.assertNotIn("confused", self.step(pet, seconds=1.0), name)
 
 
+class CryTest(unittest.TestCase):
+    """De vez em quando, com o Claude parado, quem tem "cry" vai pro canto da tela e chora um pouco."""
+    setUp, tearDown = ConfusedTest.setUp, ConfusedTest.tearDown
+    pet_on_floor, step = ConfusedTest.pet_on_floor, ConfusedTest.step
+
+    def crying_pet(self, s, **cfg):
+        pet = self.pet_on_floor("pato_cachecol", **cfg)
+        pet.s, pet.next_confused, pet.next_cry = s, self.t[0] + 999, self.t[0]
+        return pet
+
+    def test_walks_to_the_nearest_corner_cries_facing_the_wall_then_goes_on(self):
+        for s, side in ((300, -1), (1500, 1)):
+            pet = self.crying_pet(s)
+            corner = 0 if side < 0 else int(pet.seg[0] - 1)
+            frames = []
+            for _ in range(30 * 30):
+                self.t[0] += 1 / 30
+                frames.append(pet.tick(1 / 30, "idle", None))
+            anims = [f.anim for f in frames]
+            first = anims.index("cry")
+            self.assertEqual(set(anims[:first]), {"walk"}, s)                  # vai andando até o canto
+            crying = [f for f in frames if f.anim == "cry"]
+            self.assertNotIn("cry", anims[first + len(crying):], s)            # chora uma vez só, seguido
+            self.assertTrue(self.C.CRY_TIME[0] <= len(crying) / 30 <= self.C.CRY_TIME[1] + 0.1, s)
+            self.assertEqual({f.x for f in crying}, {corner}, s)              # no canto
+            self.assertEqual({f.facing for f in crying}, {side}, s)           # virado pra parede
+            self.assertGreater(pet.next_cry, self.t[0] + 30, s)                # o próximo já está sorteado
+
+    def test_also_while_waiting_for_you_but_not_while_claude_works_or_calls_you(self):
+        pet = self.crying_pet(5)
+        pet.next_cry = self.t[0] + 100
+        self.assertEqual(self.step(pet, "done", 4.0)[-1], "waiting")          # comemorou, esperando você
+        pet.next_cry = self.t[0]
+        self.assertEqual(self.step(pet, "done", 2.0)[-1], "cry")
+        for st in ("thinking", "working", "attention"):
+            pet = self.crying_pet(5)
+            self.assertNotIn("cry", self.step(pet, st, 2.0), st)
+
+    def test_claude_doing_something_ends_it(self):
+        pet = self.crying_pet(5)
+        self.assertEqual(self.step(pet, seconds=1.0)[-1], "cry")
+        self.assertEqual(set(self.step(pet, "working", 0.5)), {"work"})
+        self.assertNotIn("cry", self.step(pet, seconds=3.0))
+
+    def test_petting_consoles_him(self):
+        pet = self.crying_pet(5)
+        self.assertEqual(self.step(pet, seconds=1.0)[-1], "cry")
+        pet.cheer()
+        anims = self.step(pet, seconds=4.0)
+        self.assertEqual(anims[0], "happy")
+        self.assertNotIn("cry", anims)
+
+    def test_never_asleep_nor_for_who_lacks_it_or_turned_off(self):
+        pet = self.crying_pet(300)
+        pet.sleep_now()                                                        # "botar pra dormir"
+        self.assertNotIn("cry", self.step(pet, seconds=2.0))
+        pet = self.crying_pet(300, sleep_after=1.0)
+        pet.next_cry = self.t[0] + 100
+        self.assertEqual(self.step(pet, seconds=2.0)[-1], "sleep")            # cochilou sozinho
+        pet.next_cry = self.t[0]
+        self.assertNotIn("cry", self.step(pet, seconds=2.0))
+        for name, cfg in (("robo", {}), ("pato", {}), ("pato_cachecol", {"cry_every": 0})):
+            pet = self.pet_on_floor(name, **cfg)
+            pet.s, pet.next_confused, pet.next_cry = 5, self.t[0] + 999, self.t[0]
+            self.assertNotIn("cry", self.step(pet, seconds=2.0), name)
+
+
 class SwingTest(unittest.TestCase):
     def test_dragging_right_leans_body_left_then_settles(self):
         from claude_pet import skins
@@ -472,7 +539,8 @@ class WindowsPortTest(unittest.TestCase):
         from claude_pet import raster, skins
         for name in skins.available():
             skin = skins.load(name)
-            for anim, rot, lean, facing in (("walk", 0, 0.0, -1), ("work", 90, 0.0, 1), ("dangle", 0, 0.3, 1)):
+            extra = tuple((a, 0, 0.0, -1) for a in ("confused", "cry") if skin.has_anim(a))   # opcionais
+            for anim, rot, lean, facing in (("walk", 0, 0.0, -1), ("work", 90, 0.0, 1), ("dangle", 0, 0.3, 1)) + extra:
                 n = skin.canvas * 2
                 surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)
                 cr = cairo.Context(surf)

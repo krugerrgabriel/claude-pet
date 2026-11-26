@@ -10,7 +10,9 @@ Um módulo de personagem em chars/ define:
   HIT           (x, y, w, h) área clicável, em pixels lógicos
   PIVOT         (x, y) ponto por onde o mouse "segura" (pêndulo ao arrastar)
   ANIMS         {animação: (fps, nº de quadros)}; "confused" é opcional: quem tem, de vez em quando
-                para o que está fazendo e toca ela uma vez (ver Pet._confused e confused_every)
+                para o que está fazendo e toca ela uma vez (ver Pet._confused e confused_every);
+                "cry" também: quem tem, de vez em quando, com o Claude parado ou esperando você, vai pro canto da tela e
+                chora um pouco (ver Pet._cry e cry_every)
   OVERLAYS      {animação: nome do efeito}            (opcional; padrão em DEFAULT_OVERLAYS)
   OVERLAY_AT    {efeito: (dx, dy)}                    (opcional; desloca o efeito)
   FLIES_WHEN_WORKING  True = trabalhando, sai voando pela tela tocando "work" (opcional)
