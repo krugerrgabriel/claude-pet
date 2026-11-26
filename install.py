@@ -3,6 +3,7 @@
 
   python3 install.py            # hooks no ~/.claude/settings.json + autostart + comando `claude-pet`
   python3 install.py --uninstall
+  python3 install.py --update      # o que a atualização automática roda: refaz hooks/atalhos, não abre o pet
 
 No Windows (py install.py): hooks + atalho no Menu Iniciar e na Inicialização, e já abre o pet.
 
@@ -110,6 +111,8 @@ def install() -> None:
         f"Exec={LAUNCHER}\nX-GNOME-Autostart-enabled=true\nX-GNOME-Autostart-Delay=5\nNoDisplay=false\n"
     )
     print(f"autostart: {AUTOSTART}")
+    if "--update" in sys.argv:
+        return
     print("\nPronto. Rode `claude-pet` (ou faça logout/login). Sessões do Claude Code já abertas")
     print("só passam a reportar depois de reiniciadas (hooks são lidos na inicialização).")
 
@@ -154,6 +157,8 @@ def install_windows() -> None:
             print(f"atalho: {lnk}")
         except (OSError, subprocess.SubprocessError) as e:
             print(f"não consegui criar o atalho {lnk}: {e}")
+    if "--update" in sys.argv:
+        return
     subprocess.Popen([str(_pythonw()), "-m", "claude_pet"], cwd=str(ROOT),
                      creationflags=getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NO_WINDOW", 0),
                      close_fds=True)

@@ -395,7 +395,7 @@ class WindowsPortTest(unittest.TestCase):
     def test_windows_modules_import_without_gtk_or_cairo(self):
         code = ("import sys; sys.modules['gi'] = None; sys.modules['cairo'] = None; "
                 "import claude_pet.core, claude_pet.raster, claude_pet.winapp, claude_pet.state, "
-                "claude_pet.focus, claude_pet.bubble, claude_pet.skins, claude_pet.chars.pato")
+                "claude_pet.focus, claude_pet.bubble, claude_pet.skins, claude_pet.charpack, claude_pet.update")
         r = subprocess.run([sys.executable, "-c", code], cwd=str(Path(__file__).resolve().parents[1]),
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -661,6 +661,147 @@ class TrollTest(unittest.TestCase):
             finally:
                 C.CONFIG_FILE = orig
                 cfgmod.CONFIG_FILE = orig
+
+
+class CharacterFormatTest(unittest.TestCase):
+    """Todo personagem é uma pasta com character.json + character.py; os customizados vêm em .pet."""
+
+    def setUp(self):
+        from claude_pet import config as C
+        self.tmp = tempfile.TemporaryDirectory()
+        self.orig = C.CONFIG_FILE
+        C.CONFIG_FILE = Path(self.tmp.name) / "cfg" / "config.json"
+
+    def tearDown(self):
+        from claude_pet import config as C
+        C.CONFIG_FILE = self.orig
+        self.tmp.cleanup()
+
+    def _folder(self, cid="minha_capi", base="capivara", **manifest):
+        import shutil
+        from claude_pet import skins
+        d = Path(self.tmp.name) / "src" / cid
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.copytree(skins.BUILTIN_DIR / base, d)
+        data = {"format": 1, "id": cid, "name": {"pt": "Minha Capi", "en": "My Capy"}, "author": "eu", **manifest}
+        (d / "character.json").write_text(json.dumps(data))
+        return d
+
+    def test_every_builtin_follows_the_format_and_draws_everything(self):
+        from claude_pet import skins
+        names = skins.available()
+        self.assertEqual(names[0], skins.ROBOT)
+        self.assertEqual(names, skins.ORDER)
+        for cid in names:
+            info = skins.info(cid)
+            self.assertTrue(info.builtin)
+            self.assertEqual(skins.read_manifest(info.path)["id"], cid)
+            skins.check(info)   # carrega e desenha todo quadro de toda animação
+
+    def test_pack_install_and_remove_custom_character(self):
+        from claude_pet import charpack, skins
+        pet_file = charpack.pack(self._folder(), Path(self.tmp.name) / "minha_capi.pet")
+        info = charpack.install(pet_file)
+        self.assertFalse(info.builtin)
+        self.assertEqual(info.path.parent, skins.custom_dir())          # fora da instalação
+        self.assertIn("minha_capi", skins.available())
+        self.assertEqual(skins.available()[-1], "minha_capi")           # customizados depois dos embutidos
+        self.assertEqual(skins.load("minha_capi").name, "minha_capi")
+        self.assertEqual(charpack.read_package(pet_file)["author"], "eu")
+        self.assertTrue(charpack.remove("minha_capi"))
+        self.assertNotIn("minha_capi", skins.available())
+        self.assertEqual(skins.load("minha_capi").name, skins.ROBOT)    # sumiu: volta pro Bit
+
+    def test_rejects_bad_packages(self):
+        import zipfile
+        from claude_pet import charpack, skins
+        bad = Path(self.tmp.name) / "bad.pet"
+        with self.assertRaises(ValueError):                              # id de um embutido
+            charpack.install(charpack.pack(self._folder("capivara"), bad))
+        with zipfile.ZipFile(bad, "w") as z:                             # caminho escapando da pasta
+            z.writestr("../evil/character.json", "{}")
+        with self.assertRaises(ValueError):
+            charpack.install(bad)
+        with zipfile.ZipFile(bad, "w") as z:                             # sem character.json
+            z.writestr("x/character.py", "")
+        with self.assertRaises(ValueError):
+            charpack.install(bad)
+        broken = self._folder("quebrado")
+        (broken / "character.py").write_text("HIT = (0, 0, 1, 1)\nPIVOT = (0, 0)\nANIMS = {'stand': (1, 1)}\n"
+                                              "def render(*a):\n    pass\n")
+        with self.assertRaises(ValueError):                              # faltam animações
+            charpack.check_folder(broken)
+        with self.assertRaises(ValueError):                              # formato de outra versão
+            charpack.check_folder(self._folder("futuro", format=2))
+        self.assertEqual([c for c in skins.available() if not skins.info(c).builtin], [])
+
+    def test_reinstall_updates_in_place(self):
+        from claude_pet import charpack, skins
+        charpack.install(charpack.pack(self._folder(), Path(self.tmp.name) / "a.pet"))
+        charpack.install(charpack.pack(self._folder(name={"pt": "Capi 2", "en": "Capy 2"}),
+                                       Path(self.tmp.name) / "b.pet"))
+        self.assertEqual([c for c in skins.available() if c == "minha_capi"], ["minha_capi"])
+        from claude_pet import i18n
+        i18n.set_language("pt")
+        self.assertEqual(skins.label("minha_capi"), "Capi 2")
+
+
+class UpdateTest(unittest.TestCase):
+    def setUp(self):
+        from claude_pet import update
+        self.tmp = tempfile.TemporaryDirectory()
+        self.orig = update.STATE
+        update.STATE = Path(self.tmp.name) / "update.json"
+
+    def tearDown(self):
+        from claude_pet import update
+        update.STATE = self.orig
+        self.tmp.cleanup()
+
+    def test_versions(self):
+        from claude_pet import update
+        self.assertTrue(update.newer("1.10.0", "1.9.3"))
+        self.assertTrue(update.newer("v2.0", "1.9.9"))
+        self.assertFalse(update.newer("1.4.0", "1.4.0"))
+
+    def test_check_asks_github_at_most_every_12h(self):
+        from claude_pet import update
+        calls = []
+
+        def fetch():
+            calls.append(1)
+            return "99.0.0"
+
+        self.assertEqual(update.check(fetch=fetch), "99.0.0")
+        self.assertEqual(update.check(fetch=fetch), "99.0.0")          # do cache, sem rede
+        self.assertEqual(len(calls), 1)
+        update.write_state(latest="0.0.1")
+        self.assertIsNone(update.check(fetch=fetch))                    # mais velha que a atual: nada
+        self.assertIsNone(update.check(force=True, fetch=lambda: None))  # sem rede: fica com o que tinha
+
+    def test_install_from_swaps_files_and_keeps_nothing_old(self):
+        import shutil
+        from claude_pet import update
+        root = Path(self.tmp.name) / "inst"
+        new = Path(self.tmp.name) / "new"
+        for d, version in ((root, "1.0.0"), (new, "2.0.0")):
+            (d / "claude_pet").mkdir(parents=True)
+            (d / "claude_pet" / "__init__.py").write_text(f'__version__ = "{version}"\n')
+            (d / "install.py").write_text("")
+        (root / "claude_pet" / "velho.py").write_text("")               # arquivo que saiu na versão nova
+        self.assertEqual(update.install_from(new, root, run_installer=False), "2.0.0")
+        self.assertFalse((root / "claude_pet" / "velho.py").exists())
+        self.assertEqual([p.name for p in root.iterdir() if p.name.startswith(".old")], [])
+        shutil.rmtree(new)
+
+    def test_git_checkout_never_self_updates(self):
+        from claude_pet import update
+        root = Path(self.tmp.name) / "repo"
+        (root / ".git").mkdir(parents=True)
+        (root / "install.py").write_text("")
+        self.assertFalse(update.can_update(root))
+        with self.assertRaises(ValueError):
+            update.apply(root, url="file:///nao/existe")
 
 
 class CrossesTest(unittest.TestCase):

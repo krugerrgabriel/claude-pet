@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "capivara",
+  "name": {
+    "pt": "Capivara",
+    "en": "Capybara"
+  },
+  "description": {
+    "pt": "Capivara zen com uma frutinha na cabeça",
+    "en": "Zen capybara with a fruit on its head"
+  },
+  "author": "claude-pet"
+}

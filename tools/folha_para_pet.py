@@ -1,6 +1,6 @@
 """Converte uma folha de sprites (9 animações, uma por linha) nos quadros de um personagem do pet.
 
-    python3 tools/folha_para_pet.py <personagem> folha.png claude_pet/chars/<personagem>.bin [previa.png] [nome=tira.png ...]
+    python3 tools/folha_para_pet.py <personagem> folha.png claude_pet/characters/<personagem>/frames.bin [previa.png] [nome=tira.png ...]
 
 As linhas da folha, nesta ordem: parado, andando, pensando, trabalhando, dormindo, feliz, comemorando,
 atenção, pendurado. Cada personagem tem a sua configuração em SHEETS (grade da folha e consertos).

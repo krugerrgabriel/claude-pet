@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "capivara_dev",
+  "name": {
+    "pt": "Capivara Dev",
+    "en": "Dev Capybara"
+  },
+  "description": {
+    "pt": "Capivara de fone e notebook, feita de folha de sprites",
+    "en": "Capybara with headphones and a laptop, from a sprite sheet"
+  },
+  "author": "claude-pet"
+}

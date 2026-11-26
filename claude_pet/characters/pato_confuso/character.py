@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import math
 
-from ..pixel import THOUGHT_COLORS, draw_computer, hmirror
+from claude_pet.pixel import THOUGHT_COLORS, draw_computer, hmirror
 
-LABEL = "Pato Pistola"
 SIDE_VIEW = True
 PACE_THINKING = True
 REST_SITS = True         # descansando no chão, fica sentadinho (nunca parado em pé)

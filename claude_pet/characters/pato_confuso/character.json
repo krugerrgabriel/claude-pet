@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "pato_confuso",
+  "name": {
+    "pt": "Pato Pistola",
+    "en": "Mad Duck"
+  },
+  "description": {
+    "pt": "Patinho sempre meio perdido",
+    "en": "A duck who is always a bit lost"
+  },
+  "author": "claude-pet"
+}

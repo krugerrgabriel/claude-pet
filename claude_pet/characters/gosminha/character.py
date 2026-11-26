@@ -7,9 +7,8 @@ from __future__ import annotations
 
 import math
 
-from ..pixel import shade
+from claude_pet.pixel import shade
 
-LABEL = "Gosminha"
 SIDE_VIEW = False
 PACE_THINKING = True
 HIT = (5, 11, 20, 19)

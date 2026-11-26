@@ -1,9 +1,8 @@
 """Capivara: de perfil, zen, com a frutinha de status equilibrada na cabeça."""
 from __future__ import annotations
 
-from ..pixel import THOUGHT_CLOUD, THOUGHT_COLORS, Pen, draw_computer, overlay, shade
+from claude_pet.pixel import THOUGHT_CLOUD, THOUGHT_COLORS, Pen, draw_computer, overlay, shade
 
-LABEL = "Capivara"
 SIDE_VIEW = True
 PACE_THINKING = False
 HIT = (2, 6, 26, 24)

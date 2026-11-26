@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "pato",
+  "name": {
+    "pt": "Patinho",
+    "en": "Duckling"
+  },
+  "description": {
+    "pt": "Patinho de cachecol na cor do status",
+    "en": "Duckling with a status-colored scarf"
+  },
+  "author": "claude-pet"
+}

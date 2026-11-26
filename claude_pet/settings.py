@@ -27,8 +27,10 @@ TEXT = "#eceae6"
 MUTED = "#9299a6"
 ACCENT = "#5ec4b6"
 ACCENT_INK = "#0f2b27"
+DANGER = "#e0685e"
 
 COLS = 4
+ROWS_VISIBLE = 3
 PREVIEW_CYCLE = ("stand", "walk", "happy", "think", "work", "celebrate", "sleep")
 CYCLE_SECONDS = 2.6
 
@@ -61,7 +63,10 @@ class Sprites:
         return self.skins[name]
 
     def frame_count(self, name: str, anim: str) -> tuple[float, int]:
-        return self.skin(name).anim_info(anim)
+        try:
+            return self.skin(name).anim_info(anim)
+        except Exception:
+            return 1.0, 1
 
     def data(self, name: str, anim: str, frame: int, px: int, bg: str) -> str:
         key = (name, anim, frame, px, bg)
@@ -70,7 +75,10 @@ class Sprites:
             skin = self.skin(name)
             scale = px
             n = skin.canvas * scale
-            pixels = raster.render(skin, anim, frame, 0, "idle", scale, self.body_color)
+            try:
+                pixels = raster.render(skin, anim, frame, 0, "idle", scale, self.body_color)
+            except Exception:   # personagem customizado com defeito: fica em branco, sem derrubar a janela
+                pixels = [None] * (n * n)
             got = " ".join("{" + " ".join(c or bg for c in pixels[y * n:(y + 1) * n]) + "}" for y in range(n))
             if len(self.cache) > 1500:
                 self.cache.clear()
@@ -98,10 +106,24 @@ class CharCard:
         self.c.create_text(self.w // 2, self.h - int(20 * s), text=skins.label(name), fill=TEXT,
                            font=app.font_card, width=self.w - 12, justify="center")
         self.badge = []
+        info = skins.info(name)
+        self.custom = bool(info and not info.builtin)
+        self.tag = []
         self.c.bind("<Enter>", lambda _e: self._set_hover(True))
         self.c.bind("<Leave>", lambda _e: self._set_hover(False))
-        self.c.bind("<Button-1>", lambda _e: app.choose_skin(name))
+        self.c.bind("<Button-1>", self._click)
         self.last = None
+
+    def _x_box(self):
+        s = self.app.ui
+        return int(8 * s), int(8 * s), int(30 * s), int(30 * s)
+
+    def _click(self, ev) -> None:
+        x0, y0, x1, y1 = self._x_box()
+        if self.custom and self.hover and x0 <= ev.x <= x1 and y0 <= ev.y <= y1:
+            self.app.remove_custom(self.name)
+            return
+        self.app.choose_skin(self.name)
 
     def _set_hover(self, on: bool) -> None:
         self.hover = on
@@ -126,6 +148,22 @@ class CharCard:
             r, cx, cy = int(11 * s), self.w - int(18 * s), int(18 * s)
             self.badge.append(self.c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=ACCENT, outline=ACCENT))
             self.badge.append(self.c.create_text(cx, cy, text="✓", fill=ACCENT_INK, font=self.app.font_badge))
+        for item in self.tag:
+            self.c.delete(item)
+        self.tag = []
+        if self.custom:
+            s = self.app.ui
+            if self.hover:   # × pra remover
+                x0, y0, x1, y1 = self._x_box()
+                self.tag.append(self.c.create_oval(x0, y0, x1, y1, fill=DANGER, outline=DANGER))
+                self.tag.append(self.c.create_text((x0 + x1) / 2, (y0 + y1) / 2, text="×", fill="#ffffff",
+                                                   font=self.app.font_h))
+            else:
+                tw = self.app.font_tag.measure(t("settings.custom")) + int(12 * s)
+                self.tag.append(round_rect(self.c, int(8 * s), int(8 * s), int(8 * s) + tw, int(26 * s), int(8 * s),
+                                           fill=LINE, outline=LINE))
+                self.tag.append(self.c.create_text(int(8 * s) + tw / 2, int(17 * s), text=t("settings.custom"),
+                                                   fill=MUTED, font=self.app.font_tag))
         self.last = None
         self.animate(self.app.now())
 
@@ -139,6 +177,43 @@ class CharCard:
             return
         self.last = key
         self.photo.put(self.app.sprites.data(self.name, anim, frame, self.px, self.bg()), to=(0, 0))
+
+
+class AddCard:
+    """Card "+ Adicionar personagem": escolhe um arquivo .pet e instala como customizado."""
+
+    def __init__(self, app: "SettingsApp", parent):
+        s = app.ui
+        self.app = app
+        self.w, self.h = int(CharCard.W * s), int(CharCard.H * s)
+        self.c = tk.Canvas(parent, width=self.w, height=self.h, bg=PANEL, highlightthickness=0, bd=0, cursor="hand2")
+        self.hover = False
+        self.c.bind("<Enter>", lambda _e: self._hover(True))
+        self.c.bind("<Leave>", lambda _e: self._hover(False))
+        self.c.bind("<Button-1>", lambda _e: app.add_custom())
+        self.draw()
+
+    def _hover(self, on: bool) -> None:
+        self.hover = on
+        self.draw()
+
+    def draw(self) -> None:
+        c, s = self.c, self.app.ui
+        c.delete("all")
+        color = ACCENT if self.hover else MUTED
+        round_rect(c, 2, 2, self.w - 2, self.h - 2, int(16 * s), fill=CARD_HOVER if self.hover else PANEL,
+                   outline=color, width=2, dash=(6, 4))
+        r, cx, cy = int(20 * s), self.w // 2, int(58 * s)
+        c.create_oval(cx - r, cy - r, cx + r, cy + r, outline=color, width=2)
+        c.create_text(cx, cy - 1, text="+", fill=color, font=self.app.font_title)
+        c.create_text(cx, self.h - int(30 * s), text=t("settings.add"), fill=TEXT if self.hover else MUTED,
+                      font=self.app.font_card, width=self.w - 16, justify="center")
+
+    def animate(self, now: float) -> None:
+        pass
+
+    def refresh(self) -> None:
+        pass
 
 
 class Segmented:
@@ -221,6 +296,7 @@ class SettingsApp:
         self.font_small = tkfont.Font(family=family, size=9)
         self.font_card = tkfont.Font(family=family, size=9, weight="bold")
         self.font_badge = tkfont.Font(family=family, size=9, weight="bold")
+        self.font_tag = tkfont.Font(family=family, size=7, weight="bold")
         self.font_name = tkfont.Font(family=family, size=14, weight="bold")
         self.sprites = Sprites(self.cfg.body_color)
         self.cards: list[CharCard] = []
@@ -325,20 +401,83 @@ class SettingsApp:
                  justify="left", wraplength=int(170 * s)).pack(fill="x")
         Toggle(self, row, bool(self.cfg.troll), self.choose_troll).c.pack(side="right", anchor="n")
 
+        self._build_updates(p)
+
+    def _build_updates(self, p) -> None:
+        from . import update
+        s = self.ui
+        self._section(p, t("settings.updates"))
+        row = tk.Frame(p, bg=PANEL)
+        row.pack(fill="x", pady=(int(8 * s), 0))
+        text = tk.Frame(row, bg=PANEL)
+        text.pack(side="left", fill="x", expand=True)
+        tk.Label(text, text=t("settings.check_updates"), font=self.font_body, fg=TEXT, bg=PANEL, anchor="w",
+                 justify="left", wraplength=int(170 * s)).pack(fill="x")
+        tk.Label(text, text=t("settings.version", version=__version__), font=self.font_small, fg=MUTED, bg=PANEL,
+                 anchor="w").pack(fill="x")
+        Toggle(self, row, bool(self.cfg.check_updates),
+               lambda on: self._save("check_updates", on)).c.pack(side="right", anchor="n")
+        if update.is_git_checkout():
+            tk.Label(p, text=t("settings.update_git"), font=self.font_small, fg=MUTED, bg=PANEL, anchor="w",
+                     justify="left", wraplength=int(236 * s)).pack(fill="x", pady=(int(6 * s), 0))
+            return
+        latest = update.read_state().get("latest")
+        if latest and update.newer(latest, __version__) and update.can_update():
+            box = tk.Frame(p, bg=ACCENT_INK, highlightthickness=1, highlightbackground=ACCENT)
+            box.pack(fill="x", pady=(int(10 * s), 0))
+            tk.Label(box, text=t("settings.update_ready", version=latest), font=self.font_body, fg=TEXT,
+                     bg=ACCENT_INK, anchor="w").pack(fill="x", padx=int(10 * s), pady=(int(8 * s), int(6 * s)))
+            btn = tk.Label(box, text=t("settings.update_now"), font=self.font_card, fg=ACCENT_INK, bg=ACCENT,
+                           padx=int(10 * s), pady=int(4 * s), cursor="hand2")
+            btn.pack(anchor="w", padx=int(10 * s), pady=(0, int(10 * s)))
+            btn.bind("<Button-1>", lambda _e: self.request_update(btn))
+
+    def request_update(self, btn) -> None:
+        from . import update
+        try:
+            update.REQUEST.parent.mkdir(parents=True, exist_ok=True)
+            update.REQUEST.write_text("1")
+        except OSError:
+            return
+        btn.configure(text=t("settings.updating"), cursor="")
+        btn.unbind("<Button-1>")
+        self.root.after(2500, self.root.destroy)
+
     def _build_right(self, p) -> None:
         s = self.ui
         self._section(p, t("settings.character"), t("settings.character_hint"), top=0, wrap=560)
-        grid = tk.Frame(p, bg=PANEL)
-        grid.pack(anchor="nw", pady=(int(12 * s), 0))
-        self.cards = []
+        names = skins.available()
         gap = int(10 * s)
-        for i, name in enumerate(skins.available()):
-            card = CharCard(self, grid, name)
+        card_w, card_h = int(CharCard.W * s), int(CharCard.H * s)
+        rows = (len(names) + 1 + COLS - 1) // COLS
+        view_h = min(rows, ROWS_VISIBLE) * (card_h + gap) - gap
+        view_w = COLS * (card_w + gap) - gap
+        holder = tk.Canvas(p, width=view_w, height=view_h, bg=PANEL, highlightthickness=0, bd=0)
+        holder.pack(anchor="nw", pady=(int(12 * s), 0))
+        grid = tk.Frame(holder, bg=PANEL)
+        holder.create_window(0, 0, window=grid, anchor="nw")
+        self.cards = []
+        for i, name in enumerate(names + ["+"]):
+            card = AddCard(self, grid) if name == "+" else CharCard(self, grid, name)
             card.c.grid(row=i // COLS, column=i % COLS, padx=(0, gap if i % COLS < COLS - 1 else 0),
                         pady=(0, gap))
             self.cards.append(card)
         for card in self.cards:
             card.refresh()
+        if rows > ROWS_VISIBLE:   # rola com a rodinha do mouse
+            grid.update_idletasks()
+            holder.configure(scrollregion=(0, 0, view_w, grid.winfo_reqheight() - gap))
+
+            def wheel(ev):
+                step = -1 if (getattr(ev, "num", 0) == 4 or getattr(ev, "delta", 0) > 0) else 1
+                holder.yview_scroll(step * 2, "units")
+
+            for w in [holder, grid] + [c.c for c in self.cards]:
+                w.bind("<MouseWheel>", wheel)
+                w.bind("<Button-4>", wheel)
+                w.bind("<Button-5>", wheel)
+            hint = tk.Label(p, text=t("settings.scroll"), font=self.font_small, fg=MUTED, bg=PANEL, anchor="e")
+            hint.pack(fill="x", pady=(int(6 * s), 0))
 
     def _center(self) -> None:
         self.root.update_idletasks()
@@ -363,6 +502,51 @@ class SettingsApp:
         self.started = self.now()
         for card in self.cards:
             card.refresh()
+
+    def add_custom(self) -> None:
+        from tkinter import filedialog, messagebox
+
+        from . import charpack
+        path = filedialog.askopenfilename(parent=self.root, title=t("settings.add"),
+                                          filetypes=[(t("settings.pet_files"), "*.pet *.zip"), ("*", "*")])
+        if not path:
+            return
+        try:
+            manifest = charpack.read_package(path)
+        except (OSError, ValueError) as e:
+            messagebox.showerror(t("settings.add"), t("settings.add_error", error=e), parent=self.root)
+            return
+        name = manifest.get("name")
+        if isinstance(name, dict):
+            name = name.get(i18n.current()) or name.get("en") or next(iter(name.values()), "?")
+        author = manifest.get("author") or "?"
+        if not messagebox.askyesno(t("settings.add"), t("settings.add_confirm", name=name, author=author),
+                                   parent=self.root, icon="warning"):
+            return
+        try:
+            info = charpack.install(path)
+        except (OSError, ValueError) as e:
+            messagebox.showerror(t("settings.add"), t("settings.add_error", error=e), parent=self.root)
+            return
+        self.sprites.skins.pop(info.id, None)
+        self.sprites.cache.clear()
+        self._save("skin", info.id)
+        self.started = self.now()
+        self.big_last = None
+        self.build()
+
+    def remove_custom(self, cid: str) -> None:
+        from tkinter import messagebox
+
+        from . import charpack
+        if not messagebox.askyesno(t("settings.remove"), t("settings.remove_confirm", name=skins.label(cid)),
+                                   parent=self.root):
+            return
+        if self.cfg.skin == cid:
+            self._save("skin", skins.ROBOT)
+        charpack.remove(cid)
+        self.sprites.skins.pop(cid, None)
+        self.build()
 
     def choose_language(self, code: str) -> None:
         self._save("language", code)

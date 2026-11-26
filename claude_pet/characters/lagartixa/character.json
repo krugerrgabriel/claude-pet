@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "lagartixa",
+  "name": {
+    "pt": "Lagartixa",
+    "en": "Gecko"
+  },
+  "description": {
+    "pt": "Lagartixa verde que anda pelas paredes",
+    "en": "Green gecko that walks on walls"
+  },
+  "author": "claude-pet"
+}

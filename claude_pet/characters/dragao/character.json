@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "dragao",
+  "name": {
+    "pt": "Dragão",
+    "en": "Dragon"
+  },
+  "description": {
+    "pt": "Dragão que voa pela tela enquanto o Claude trabalha",
+    "en": "Dragon that flies around while Claude works"
+  },
+  "author": "claude-pet"
+}

@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import math
 
-from ..pixel import THOUGHT_CLOUD, THOUGHT_COLORS, draw_computer
+from claude_pet.pixel import THOUGHT_CLOUD, THOUGHT_COLORS, draw_computer
 
-LABEL = "Lagartixa"
 SIDE_VIEW = True
 PACE_THINKING = True
 HIT = (1, 12, 28, 18)          # simétrico na horizontal: vale virada pros dois lados

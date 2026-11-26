@@ -51,9 +51,9 @@ class Pet:
     def __init__(self, cfg: Config, area: Rect, area_at: Callable[[float, float], Rect] | None = None,
                  rng: random.Random | None = None, skin=None,
                  neighbor: Callable[[Rect, int, float], Rect | None] | None = None):
-        from .skins import RobotSkin
+        from .skins import load as load_skin
         self.cfg = cfg
-        self.skin = skin or RobotSkin()
+        self.skin = skin or load_skin()
         self.size = self.skin.canvas * self.skin.pixel_scale(cfg.scale)
         self.area = area
         self.area_at = area_at or (lambda x, y: self.area)

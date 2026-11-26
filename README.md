@@ -63,7 +63,11 @@ Not into robots? Right click → **Settings…** and pick another one. Every cha
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, made from a sprite sheet | No light: every state has its own scene |
 
-To make a character from your own sprite sheet, see `tools/folha_para_pet.py`.
+### 🎨 Custom characters
+
+Got a character someone made (a `.pet` file)? **Settings… → Add character** and pick the file. Custom characters live in `~/.config/claude-pet/characters/`, outside the install folder, so **updating claude-pet never touches them**, and they never go to GitHub. Hover a custom card and click the **×** to remove it.
+
+Every character, built-in or custom, uses the same format: a folder with `character.json` and `character.py` (plus `frames.bin` for sprite sheets). The full spec is in [`CLAUDE.md`](CLAUDE.md), so you can just ask Claude Code to make you one. To pack and check by hand: `python3 -m claude_pet.charpack check|pack|install <folder or .pet>`. Characters are Python code: only install them from people you trust. To build one from your own sprite sheet, see `tools/folha_para_pet.py`.
 
 ---
 
@@ -94,7 +98,7 @@ To make a character from your own sprite sheet, see `tools/folha_para_pet.py`.
 mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.tar.gz | tar xz -C ~/.local/share && python3 ~/.local/share/claude-pet/install.py && ~/.local/bin/claude-pet &
 ```
 
-Downloads the latest [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) into `~/.local/share/claude-pet`, installs the hooks and the launcher, and starts the pet. **To update, run the same command** (then quit the pet from its menu and run `claude-pet` again). To remove it: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+Downloads the latest [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) into `~/.local/share/claude-pet`, installs the hooks and the launcher, and starts the pet. **Updates:** when a new version comes out the pet tells you, and you update from the right-click menu or in **Settings** with one click (or run the same command again). To remove it: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
 
 ### 🪟 On Windows (beta)
 
@@ -104,7 +108,7 @@ You need Python 3 from [python.org](https://www.python.org/downloads/) or winget
 $z="$env:TEMP\claude-pet.zip"; irm https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.zip -OutFile $z; Expand-Archive $z $env:LOCALAPPDATA -Force; py "$env:LOCALAPPDATA\claude-pet\install.py"
 ```
 
-It downloads the latest release into `%LOCALAPPDATA%\claude-pet`, installs the hooks, adds a **Claude Pet** shortcut to the Start menu and to Startup (it opens by itself when you sign in) and starts the pet. **To update, run the same command.** To remove it: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
+It downloads the latest release into `%LOCALAPPDATA%\claude-pet`, installs the hooks, adds a **Claude Pet** shortcut to the Start menu and to Startup (it opens by itself when you sign in) and starts the pet. **Updates:** the pet tells you when a new version is out and updates with one click. To remove it: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
 
 On Windows the window is built with Tk instead of GTK, but the drawing, the characters and the behavior are the same. Clicking the pet brings up the Windows Terminal, console or VS Code window running that session.
 
@@ -250,8 +254,7 @@ Removes only Bit's hooks (backing up `settings.json` first), the `claude-pet` co
 ```
 claude-pet/
 ├── claude_pet/          ← the pet (python3 -m claude_pet)
-│   └── chars/           ← gecko, slime, capybara, duckling, mad duck (one file each);
-│                           scarf duck and dev capybara with their frames in a .bin
+│   └── characters/      ← built-in characters, one folder each (character.json + character.py)
 ├── hooks/               ← the Claude Code hook
 ├── tests/               ← hook → state → behavior
 ├── tools/               ← sprite previews, review page, README GIFs, sprite sheet converter
@@ -264,7 +267,7 @@ claude-pet/
 
 ## 🔒 Privacy
 
-- Everything stays on your machine. **No network calls.**
+- Everything stays on your machine. The only network call is the update check: at most every 12 h the pet asks GitHub for the latest release version (no data about you). Turn it off in **Settings** or with `"check_updates": false`.
 - The hook stores only the session status, the tool name, the working directory and the `claude` process id. **Never your prompts or code.**
 - To type along, the pet only checks **whether** a key is down, never **which** one: nothing from the keyboard is stored or logged. Turn it off with `"type_along": false`.
 - The installer backs up `settings.json` before touching it and only adds or removes Bit's own entries.

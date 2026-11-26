@@ -63,7 +63,11 @@ Não curtiu robô? Botão direito → **Configurações…** e escolha outro. To
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola**, sempre meio perdido, com um cacho em "?" que espeta num "!" quando o Claude precisa de você | Tela do notebook |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev**, de fone, óculos e notebook, feita a partir de uma folha de sprites | Sem luzinha: cada estado tem a sua cena |
 
-Pra criar um personagem a partir da sua própria folha de sprites, veja `tools/folha_para_pet.py`.
+### 🎨 Personagens customizados
+
+Ganhou um personagem que alguém fez (um arquivo `.pet`)? **Configurações… → Adicionar personagem** e escolha o arquivo. Os customizados ficam em `~/.config/claude-pet/characters/`, fora da pasta da instalação: **atualizar o claude-pet não mexe neles**, e eles não vão pro GitHub. Pra remover, passe o mouse no card e clique no **×**.
+
+Todo personagem, embutido ou customizado, segue o mesmo formato: uma pasta com `character.json` e `character.py` (e `frames.bin` nos de folha de sprites). A especificação completa está no [`CLAUDE.md`](CLAUDE.md), então dá pra pedir pro Claude Code fazer um pra você. Pra empacotar e conferir na mão: `python3 -m claude_pet.charpack check|pack|install <pasta ou .pet>`. Personagem é código Python: só instale de quem você confia. Pra criar a partir da sua própria folha de sprites, veja `tools/folha_para_pet.py`.
 
 ---
 
@@ -94,7 +98,7 @@ Pra criar um personagem a partir da sua própria folha de sprites, veja `tools/f
 mkdir -p ~/.local/share && curl -fsSL https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.tar.gz | tar xz -C ~/.local/share && python3 ~/.local/share/claude-pet/install.py && ~/.local/bin/claude-pet &
 ```
 
-Baixa a última [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) em `~/.local/share/claude-pet`, instala os hooks e o atalho, e já chama o pet. **Pra atualizar, é o mesmo comando** (depois feche o pet pelo menu e chame `claude-pet` de novo). Pra remover: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
+Baixa a última [release](https://github.com/krugerrgabriel/claude-pet/releases/latest) em `~/.local/share/claude-pet`, instala os hooks e o atalho, e já chama o pet. **Atualizações:** quando sai versão nova o pet avisa, e você atualiza com um clique pelo botão direito ou nas **Configurações** (ou rodando o mesmo comando de novo). Pra remover: `python3 ~/.local/share/claude-pet/install.py --uninstall`.
 
 ### 🪟 No Windows (beta)
 
@@ -104,7 +108,7 @@ Precisa do Python 3 do [python.org](https://www.python.org/downloads/) ou do win
 $z="$env:TEMP\claude-pet.zip"; irm https://github.com/krugerrgabriel/claude-pet/releases/latest/download/claude-pet.zip -OutFile $z; Expand-Archive $z $env:LOCALAPPDATA -Force; py "$env:LOCALAPPDATA\claude-pet\install.py"
 ```
 
-Baixa a última release em `%LOCALAPPDATA%\claude-pet`, instala os hooks, cria o atalho **Claude Pet** no Menu Iniciar e na Inicialização (abre sozinho quando você entra no Windows) e já abre o pet. **Pra atualizar, é o mesmo comando.** Pra remover: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
+Baixa a última release em `%LOCALAPPDATA%\claude-pet`, instala os hooks, cria o atalho **Claude Pet** no Menu Iniciar e na Inicialização (abre sozinho quando você entra no Windows) e já abre o pet. **Atualizações:** o pet avisa quando sai versão nova e atualiza com um clique. Pra remover: `py "$env:LOCALAPPDATA\claude-pet\install.py" --uninstall`.
 
 No Windows a janela é feita com Tk em vez de GTK, mas o desenho, os personagens e o comportamento são os mesmos. Clicar no pet traz pra frente o Windows Terminal, o console ou o VS Code onde a sessão está.
 
@@ -250,8 +254,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 ```
 claude-pet/
 ├── claude_pet/          ← o pet (python3 -m claude_pet)
-│   └── chars/           ← lagartixa, gosminha, capivara, pato, dragao, pato_confuso (um arquivo cada);
-│                           capivara_dev com os quadros num .bin
+│   └── characters/      ← personagens embutidos, uma pasta cada (character.json + character.py)
 ├── hooks/               ← o hook do Claude Code
 ├── tests/               ← hook → estado → comportamento
 ├── tools/               ← prévias dos sprites, página de revisão, GIFs do README, conversor de folha de sprites
@@ -264,7 +267,7 @@ claude-pet/
 
 ## 🔒 Privacidade
 
-- Tudo fica na sua máquina. **Nenhuma chamada de rede.**
+- Tudo fica na sua máquina. A única chamada de rede é a busca por atualização: no máximo a cada 12 h o pet pergunta pro GitHub qual é a última versão (nenhum dado seu vai junto). Desliga nas **Configurações** ou com `"check_updates": false`.
 - O hook guarda só o status da sessão, o nome da ferramenta, a pasta de trabalho e o PID do `claude`. **Nunca seus prompts ou seu código.**
 - Pra digitar junto, o pet só olha **se** tem tecla apertada, nunca **qual**: não guarda nem registra nada do teclado. Desliga com `"type_along": false`.
 - O instalador faz backup do `settings.json` antes de mexer e só adiciona ou remove as entradas do próprio Bit.

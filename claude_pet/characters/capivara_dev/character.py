@@ -1,6 +1,6 @@
 """Capivara Dev: capivara gordinha de fone roxo, óculos e camiseta preta, desenhada a partir de uma folha de sprites.
 
-Os quadros vêm prontos de capivara_dev.bin (gerado por `tools/folha_para_pet.py capivara_dev ...` a partir
+Os quadros vêm prontos de frames.bin (gerado por `tools/folha_para_pet.py capivara_dev ...` a partir
 da folha de 9 animações x 8 quadros): parado, andando, pensando (balão, reticências, lâmpada), trabalhando
 (cadeira, mesa e notebook), dormindo (deitada, zzz), feliz, comemorando (pulo com brilho), atenção ("!") e
 pendurado (a mão segurando, olhos tontos). Os efeitos já estão desenhados nos quadros, então nenhum efeito
@@ -10,9 +10,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..folha import Folha, run
+from claude_pet.folha import Folha, run
 
-LABEL = "Capivara Dev"
 SIDE_VIEW = True
 PACE_THINKING = False    # pensa parada, com o balão da folha
 HIT = (5, 11, 22, 19)
@@ -36,6 +35,6 @@ SHEET = {   # animação -> (quadros por segundo, quadros da folha)
     "dangle": (6, run("pendurado", ALL)),
 }
 
-_FOLHA = Folha(Path(__file__).with_suffix(".bin"), SHEET)
+_FOLHA = Folha(Path(__file__).with_name("frames.bin"), SHEET)
 ANIMS = _FOLHA.anims
 render = _FOLHA.render

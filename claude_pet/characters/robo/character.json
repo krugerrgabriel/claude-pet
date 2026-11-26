@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "id": "robo",
+  "name": {"pt": "Robô", "en": "Robot"},
+  "description": {"pt": "O Bit, robozinho padrão com a antena na cor do status", "en": "Bit, the default little robot with a status-colored antenna"},
+  "author": "claude-pet"
+}

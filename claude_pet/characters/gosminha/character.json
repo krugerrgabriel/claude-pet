@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "id": "gosminha",
+  "name": {
+    "pt": "Gosminha",
+    "en": "Slime"
+  },
+  "description": {
+    "pt": "Gelatina lilás com um núcleo na cor do status",
+    "en": "Lilac slime with a status-colored core"
+  },
+  "author": "claude-pet"
+}

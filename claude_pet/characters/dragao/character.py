@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import math
 
-from ..pixel import shade
+from claude_pet.pixel import shade
 
-LABEL = "Dragão"
 SIDE_VIEW = True
 PACE_THINKING = True
 FLIES_WHEN_WORKING = True

@@ -35,8 +35,9 @@ def shade(h: str, factor: float) -> str:
 
 
 class Pen:
-    def __init__(self, cr, scale: int, flip: bool = False, canvas: int = CANVAS):
+    def __init__(self, cr, scale: int, flip: bool = False, canvas: int = CANVAS, body: str = "#5ec4b6"):
         self.cr, self.s, self.flip, self.canvas = cr, scale, flip, canvas
+        self.body = body   # cor do corpo escolhida na config (body_color)
 
     def px(self, x: float, y: float, w: float = 1, h: float = 1, color: str = "#000000") -> None:
         if self.flip:

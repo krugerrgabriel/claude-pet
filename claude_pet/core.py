@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import fields
 from pathlib import Path
@@ -70,6 +71,15 @@ class PetCore:
         self._presses: list[float] = []
         self._typing_until = 0.0
         self._troll: Troll | None = None
+        # atualização (ver update.py): conferida em segundo plano; o resultado volta pela thread principal
+        self.update_available: str | None = None
+        self.updating = False
+        self.update_notice = ""
+        self.update_notice_until = 0.0
+        self._update_found = None
+        self._update_result = None
+        self._update_checked_at = -1e9
+        self._update_thread = None
 
     # ------------------------------------------------------------ sem o Claude: você digitando
     def _pet_status(self, now: float) -> str:
@@ -105,6 +115,7 @@ class PetCore:
             self.top = self.sessions[0] if self.sessions else None
             self._maybe_wake()
         self._watch_config(now)
+        self._update_tick(now)
 
     def _dismiss_done_on_hover(self, pointer, now: float) -> None:
         """Mouse passou (mesmo rapidinho) pelo pet ou pelo balão = "vi que terminou": some o balão e o ✓."""
@@ -173,6 +184,10 @@ class PetCore:
         pointer = self._pointer()
         hovering = pointer is not None and self.pet.contains(*pointer)
 
+        if self.updating:
+            return t("update.working")
+        if time.monotonic() < self.update_notice_until and not self.pressed:
+            return self.update_notice
         if self.troll.active and self.troll.phase == "hold":
             return t("troll.steal" if self.troll.prank == "steal" else "troll.heavy")
         if top and top.status == "attention":
@@ -234,6 +249,8 @@ class PetCore:
         else:
             items.append(("item", t("menu.no_sessions"), None, False))
         items.append(("sep",))
+        if self.update_available and not self.updating:
+            items.append(("item", t("menu.update", version=self.update_available), self._start_update, True))
         items.append(("item", t("menu.settings"), self._open_settings, True))
         if self.pet.forced_sleep:
             items.append(("item", t("menu.wake"), self._wake, True))
@@ -254,6 +271,59 @@ class PetCore:
             self._settings_proc = subprocess.Popen([sys.executable, "-m", "claude_pet.settings"], cwd=str(root))
         except OSError:
             self._settings_proc = None
+
+    # ------------------------------------------------------------ atualização
+    def _update_tick(self, now: float) -> None:
+        from . import update
+        if self._update_result is not None:            # a thread de atualizar terminou
+            kind, value = self._update_result
+            self._update_result, self.updating = None, False
+            if kind == "ok":
+                update.restart()
+                self._quit()
+                return
+            self.update_notice, self.update_notice_until = t("update.failed", error=value), now + 12
+        if update.REQUEST.exists():                    # pedido da janela de Configurações
+            try:
+                update.REQUEST.unlink()
+            except OSError:
+                pass
+            self._start_update()
+        found, self._update_found = self._update_found, None
+        if found:
+            self.update_available = found
+            if update.read_state().get("notified") != found:   # avisa uma vez por versão
+                update.write_state(notified=found)
+                self.update_notice = t("update.bubble", version=found)
+                self.update_notice_until = now + 15
+        if not self.cfg.check_updates or not update.can_update():
+            return
+        thread = self._update_thread
+        if now - self._update_checked_at > 3600 and not (thread and thread.is_alive()):
+            self._update_checked_at = now          # check() só vai à rede a cada 12 h; aqui é só ler o update.json
+            self._update_thread = threading.Thread(target=self._check_update_bg, daemon=True)
+            self._update_thread.start()
+
+    def _check_update_bg(self) -> None:
+        from . import update
+        try:
+            self._update_found = update.check()
+        except Exception:
+            self._update_found = None
+
+    def _start_update(self) -> None:
+        from . import update
+        if self.updating or not update.can_update():
+            return
+        self.updating = True
+
+        def work():
+            try:
+                self._update_result = ("ok", update.apply())
+            except Exception as e:   # sem rede, sem permissão...: avisa e segue na versão atual
+                self._update_result = ("error", str(e) or e.__class__.__name__)
+
+        threading.Thread(target=work, daemon=True).start()
 
     # ------------------------------------------------------------ config.json mudou (janela de Configurações)
     def _watch_config(self, now: float) -> None:

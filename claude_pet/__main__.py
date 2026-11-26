@@ -25,6 +25,11 @@ def _single_instance(lock) -> bool:
 def main() -> int:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     lock = open(LOCK_FILE, "a+")
+    if "--wait" in sys.argv:   # reinício depois de atualizar: espera o pet antigo fechar
+        import time
+        deadline = time.monotonic() + 15
+        while not _single_instance(lock) and time.monotonic() < deadline:
+            time.sleep(0.3)
     if not _single_instance(lock):
         print("claude-pet já está rodando.", file=sys.stderr)
         return 0

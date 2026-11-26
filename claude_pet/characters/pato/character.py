@@ -7,9 +7,8 @@ from __future__ import annotations
 
 import math
 
-from ..pixel import THOUGHT_CLOUD, THOUGHT_COLORS, draw_computer, shade
+from claude_pet.pixel import THOUGHT_CLOUD, THOUGHT_COLORS, draw_computer, shade
 
-LABEL = "Patinho"
 SIDE_VIEW = True
 PACE_THINKING = True
 HIT = (3, 6, 24, 24)
