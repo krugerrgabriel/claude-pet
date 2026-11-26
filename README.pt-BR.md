@@ -79,6 +79,7 @@ Os personagens de folha de sprites passam de um quadro pro outro com uma transi�
 | 🧗 **Anda por tudo** | Chão, paredes e teto do monitor, respeitando a dock e a barra do topo |
 | 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura. Jogado contra a borda que encosta em outro monitor, atravessa pra ele |
 | 💤 **Humores** | Repara no seu cursor, gosta de carinho ❤, dorme quando nada está acontecendo |
+| 😈 **Modo troll** | Desligado por padrão; liga pelo menu. De vez em quando ele rouba o cursor e sai correndo com ele, ou se pendura nele e deixa o mouse pesado. Nunca com botão do mouse apertado nem quando o Claude precisa de você, e um puxão forte faz ele largar |
 | 👻 **Nunca atrapalha** | O clique atravessa tudo menos o próprio Bit. Dá pra esconder por 30 min ou 2 h no menu |
 | 🧹 **Se limpa sozinho** | Sessões cujo processo `claude` morreu são esquecidas automaticamente |
 | 🪶 **Leve** | Biblioteca padrão + o GTK que já vem no seu desktop. Só redesenha quando o quadro muda |

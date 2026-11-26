@@ -7,6 +7,7 @@ Movimento:
     (base esquerda→direita, parede direita subindo, teto direita→esquerda, parede esquerda descendo).
   - "free": solto (caindo/arremessado) até tocar o chão.
   - "drag": segurado pelo mouse.
+  - "troll": controlado pelo modo troll (troll.py) durante uma pegadinha.
   - "fly": voando pela tela (só personagens com `flies`, enquanto o Claude trabalha).
 Quando o Claude não está ocioso, ele desce para o chão (se estiver em parede/teto, solta e cai).
 """
@@ -89,6 +90,7 @@ class Pet:
         self.hover_since: float | None = None
         self.lean = 0.0
         self.lean_v = 0.0
+        self.troll_anim = ("walk", 1)   # (animação, olhar) que o modo troll pede no modo "troll"
 
     # ------------------------------------------------------------ perímetro
     @property
@@ -226,6 +228,8 @@ class Pet:
             self._take_off(now)
         if self.mode == "drag":
             anim = "dangle"
+        elif self.mode == "troll":
+            anim, look = self.troll_anim
         elif self.mode == "fly":
             anim, look = self._fly(dt, now)
         elif self.mode == "free":

@@ -79,6 +79,7 @@ The sprite sheet characters move from one frame to the next with a smooth transi
 | 🧗 **Walks everywhere** | Floor, walls and ceiling of your monitor, respecting the dock and top bar |
 | 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held. Throw him at an edge shared with another monitor and he flies across |
 | 💤 **Moods** | Notices your cursor, enjoys being petted ❤, sleeps when nothing is happening |
+| 😈 **Troll mode** | Off by default; turn it on from the menu. Every so often he steals your cursor and runs off with it, or hangs from it and makes the mouse heavy. Never while a mouse button is held or when Claude needs you, and a hard yank makes him let go |
 | 👻 **Never in the way** | Clicks go through everything except Bit himself. Hide him for 30 min or 2 h from the menu |
 | 🧹 **Self-cleaning** | Sessions whose `claude` process died are forgotten automatically |
 | 🪶 **Lightweight** | Standard library + the GTK that already ships with your desktop. Redraws only when the frame changes |

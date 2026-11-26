@@ -181,6 +181,16 @@ class TkPetApp(PetCore):
             return None
         return float(x), float(y)
 
+    def _warp_pointer(self, x: int, y: int) -> None:
+        if WINDOWS:
+            winsys.set_cursor(x, y)
+        else:   # Tk no Linux (testes): move relativo à janela
+            self.root.event_generate("<Motion>", warp=True, x=x - self.root.winfo_rootx(),
+                                     y=y - self.root.winfo_rooty())
+
+    def _buttons_down(self) -> bool:
+        return winsys.mouse_buttons_down() if WINDOWS else False
+
     # ------------------------------------------------------------ loop
     def _tick(self) -> None:
         try:
@@ -202,6 +212,7 @@ class TkPetApp(PetCore):
         pointer = self._pointer()
         self._dismiss_done_on_hover(pointer, now)
         status = self.top.status if self.top else "idle"
+        pointer = self._troll_step(now, dt, pointer, status)
         frame = self.pet.tick(dt, status, pointer)
 
         if self.frame is None or (frame.x, frame.y) != (self.frame.x, self.frame.y):

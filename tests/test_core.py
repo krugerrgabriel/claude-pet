@@ -556,6 +556,107 @@ class WindowsPortTest(unittest.TestCase):
                 skins.load("pato_cachecol")                      # volta o módulo pro padrão
 
 
+class TrollTest(unittest.TestCase):
+    """Modo troll: rouba o cursor e corre, ou se pendura e deixa o mouse pesado. Só ligado e com segurança."""
+
+    def _setup(self, prank):
+        from claude_pet import troll as troll_mod
+        pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        for _ in range(200):   # cai e fica no chão
+            pet.tick(1 / 30, "idle", None)
+        tr = troll_mod.Troll(pet, random.Random(2))
+        tr._pranks = prank
+        orig = tr.rng.choice
+        tr.rng.choice = lambda seq: prank if seq is troll_mod.PRANKS else orig(seq)
+        return pet, tr
+
+    def _run(self, pet, tr, pointer, seconds, now=0.0, move=(0, 0), status="idle", buttons=False):
+        warps = []
+        for i in range(int(seconds * 30)):
+            now += 1 / 30
+            pointer = (pointer[0] + move[0], pointer[1] + move[1])
+            want = tr.tick(now, 1 / 30, pointer, status, buttons, False)
+            if want:
+                pointer = want
+                warps.append(want)
+            pet.tick(1 / 30, status, pointer)
+        return now, pointer, warps
+
+    def test_off_by_default_never_touches_the_cursor(self):
+        pet, tr = self._setup("steal")
+        _, _, warps = self._run(pet, tr, (900.0, 500.0), 10)
+        self.assertEqual(warps, [])
+
+    def test_steal_runs_off_with_the_cursor_and_gives_it_back(self):
+        pet, tr = self._setup("steal")
+        tr.enable(True, 0.0)
+        now, pointer, warps = self._run(pet, tr, (900.0, 500.0), 8.5)
+        self.assertGreater(len(warps), 30)
+        xs = [w[0] for w in warps]
+        self.assertGreater(max(xs) - min(xs), 300)       # correu com ele
+        self.assertGreater(warps[-1][1], 900)            # cursor desceu até o chão junto
+        self.assertFalse(tr.active)                      # e acabou sozinho
+        self.assertNotEqual(pet.mode, "troll")
+        _, _, more = self._run(pet, tr, pointer, 5, now)  # depois fica um tempo quieto
+        self.assertEqual(more, [])
+
+    def test_heavy_mouse_moves_slowly(self):
+        pet, tr = self._setup("heavy")
+        tr.enable(True, 0.0)
+        now, pointer, _ = self._run(pet, tr, (900.0, 400.0), 5.2)   # até pendurar
+        self.assertTrue(tr.active)
+        self.assertEqual(pet.mode, "drag")
+        x0 = pointer[0]
+        now, pointer, warps = self._run(pet, tr, pointer, 1, now, move=(20, 0))
+        self.assertTrue(warps)
+        self.assertLess(pointer[0] - x0, 20 * 30 * 0.5)  # o mouse andou bem menos que a mão
+        self._run(pet, tr, pointer, 6, now)
+        self.assertFalse(tr.active)
+
+    def test_never_pranks_with_a_button_down_or_when_claude_needs_you(self):
+        pet, tr = self._setup("steal")
+        tr.enable(True, 0.0)
+        _, _, warps = self._run(pet, tr, (900.0, 500.0), 8, buttons=True)
+        self.assertEqual(warps, [])
+        _, _, warps = self._run(pet, tr, (900.0, 500.0), 8, status="attention")
+        self.assertEqual(warps, [])
+
+    def test_button_press_mid_prank_lets_go(self):
+        pet, tr = self._setup("steal")
+        tr.enable(True, 0.0)
+        now, pointer, warps = self._run(pet, tr, (900.0, 500.0), 5.0)
+        self.assertTrue(tr.active and warps)
+        now, _, warps = self._run(pet, tr, pointer, 0.2, now, buttons=True)
+        self.assertEqual(warps, [])
+        self.assertFalse(tr.active)
+
+    def test_yank_makes_it_drop_the_cursor(self):
+        pet, tr = self._setup("steal")
+        tr.enable(True, 0.0)
+        now, pointer, _ = self._run(pet, tr, (900.0, 500.0), 5.0)
+        self.assertTrue(tr.active)
+        tr.tick(now + 0.03, 0.03, (pointer[0] + 400, pointer[1] - 300), "idle", False, False)
+        self.assertFalse(tr.active)
+
+    def test_menu_toggles_troll_mode(self):
+        from claude_pet.core import PetCore
+        from claude_pet.i18n import t
+
+        class Fake(PetCore):
+            pass
+
+        f = Fake()
+        f._init_core()
+        f.cfg, f.skin = Config(), __import__("claude_pet.skins", fromlist=["load"]).load()
+        f.pet = Pet(Config(), Rect(0, 0, 1920, 1080), rng=random.Random(1))
+        labels = [i[1] for i in f.menu_model() if i[0] == "item"]
+        self.assertIn(t("menu.troll_on"), labels)
+        f._toggle_troll()
+        self.assertTrue(f.troll.on)
+        labels = [i[1] for i in f.menu_model() if i[0] == "item"]
+        self.assertIn(t("menu.troll_off"), labels)
+
+
 class CrossesTest(unittest.TestCase):
     def test_fast_pass_over_rect_counts(self):
         from claude_pet.window import _crosses
