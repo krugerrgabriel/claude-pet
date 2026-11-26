@@ -189,6 +189,19 @@ class PetWindow(PetCore, Gtk.Window):
         _screen, x, y = seat.get_pointer().get_position()
         return float(x), float(y)
 
+    def _warp_pointer(self, x: int, y: int) -> None:
+        seat = self.display.get_default_seat()
+        if seat:
+            seat.get_pointer().warp(self.get_screen(), x, y)
+
+    def _buttons_down(self) -> bool:
+        seat = self.display.get_default_seat()
+        if not seat:
+            return True
+        mask = self.get_screen().get_root_window().get_device_position(seat.get_pointer())[3]
+        return bool(mask & (Gdk.ModifierType.BUTTON1_MASK | Gdk.ModifierType.BUTTON2_MASK
+                            | Gdk.ModifierType.BUTTON3_MASK))
+
     # ------------------------------------------------------------ loop
     def _tick(self) -> bool:
         now = time.monotonic()
@@ -205,6 +218,7 @@ class PetWindow(PetCore, Gtk.Window):
         pointer = self._pointer()
         self._dismiss_done_on_hover(pointer, now)
         status = self._pet_status(now)
+        pointer = self._troll_step(now, dt, pointer, status)
         frame = self.pet.tick(dt, status, pointer)
 
         if self.frame is None or (frame.x, frame.y) != (self.frame.x, self.frame.y):

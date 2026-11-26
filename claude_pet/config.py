@@ -47,6 +47,8 @@ class Config:
     hover_pet_time: float = 1.2       # cursor parado em cima → carinho
     confused_every: float = 80.0      # personagens com animação "confused": em média a cada tantos
                                       # segundos (sorteado entre metade e 1,5x) fica confuso; 0 = nunca
+    cry_every: float = 180.0          # personagens com animação "cry": em média a cada tantos segundos, com o
+                                      # Claude parado ou esperando você, vai pro canto da tela e chora um pouco; 0 = nunca
 
     # Com o Claude parado, o pet digita junto com você
     type_along: bool = True           # você digitando → pet digita junto (só vê SE tem tecla apertada, nunca qual)

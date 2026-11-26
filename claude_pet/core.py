@@ -4,7 +4,7 @@ Com o Claude parado, você digitando faz o pet digitar junto.
 
 A janela concreta herda `PetCore` e fornece: self.cfg, self.store, self.pet, self.bubble (com `.rect`),
 self.skin, self.size, `_pointer()`, `_apply_skin()`, `_hide_for(min)` e `_quit()`; opcionalmente
-`_keys_down()`.
+`_keys_down()` (digitar junto) e, pro modo troll, `_warp_pointer(x, y)` e `_buttons_down()`.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from . import focus, i18n, skins
 from .character import Frame
 from .i18n import t
 from .state import Session
+from .troll import Troll
 
 # Você digitando (sem o Claude fazendo nada): TYPE_KEYS teclas novas em TYPE_WINDOW segundos, e o pet
 # continua digitando até TYPE_HOLD segundos depois da última (pausa entre palavras não para ele).
@@ -63,6 +64,7 @@ class PetCore:
         self._keys = 0              # máscara de "tem tecla apertada" da leitura anterior (nunca guardada)
         self._presses: list[float] = []
         self._typing_until = 0.0
+        self._troll: Troll | None = None
 
     # ------------------------------------------------------------ sem o Claude: você digitando
     def _pet_status(self, now: float) -> str:
@@ -117,6 +119,31 @@ class PetCore:
         self.top = self.sessions[0] if self.sessions else None
         self._quiet_hover = True
 
+    # ------------------------------------------------------------ modo troll
+    @property
+    def troll(self) -> Troll:
+        if getattr(self, "_troll", None) is None or self._troll.pet is not self.pet:
+            self._troll = Troll(self.pet)
+        return self._troll
+
+    def _troll_step(self, now: float, dt: float, pointer, status: str):
+        """Roda a pegadinha da vez (se o modo estiver ligado) e devolve o ponteiro já com o cursor movido."""
+        if not self.troll.on:
+            return pointer
+        try:
+            buttons = self._buttons_down()
+        except Exception:
+            buttons = True   # sem saber se tem botão apertado, não apronta
+        want = self.troll.tick(now, dt, pointer, status, buttons, self.pressed)
+        if want is None:
+            return pointer
+        x, y = int(round(want[0])), int(round(want[1]))
+        self._warp_pointer(x, y)
+        return float(x), float(y)
+
+    def _toggle_troll(self) -> None:
+        self.troll.enable(not self.troll.on, time.monotonic())
+
     # ------------------------------------------------------------ dormir
     def _sleep(self) -> None:
         self.sleep_since = time.time()
@@ -143,6 +170,8 @@ class PetCore:
         pointer = self._pointer()
         hovering = pointer is not None and self.pet.contains(*pointer)
 
+        if self.troll.active and self.troll.phase == "hold":
+            return t("troll.steal" if self.troll.prank == "steal" else "troll.heavy")
         if top and top.status == "attention":
             msg = i18n.claude_message(top.message)
             return f"{msg or t('bubble.needs_you')}{extra}.\n{t('bubble.click')}"
@@ -218,6 +247,7 @@ class PetCore:
             items.append(("item", t("menu.wake"), self._wake, True))
         else:
             items.append(("item", t("menu.sleep"), self._sleep, True))
+        items.append(("item", t("menu.troll_off" if self.troll.on else "menu.troll_on"), self._toggle_troll, True))
         items.append(("item", t("menu.hide_30"), lambda: self._hide_for(30), True))
         items.append(("item", t("menu.hide_2h"), lambda: self._hide_for(120), True))
         items.append(("item", t("menu.quit"), self._quit, True))
@@ -258,4 +288,10 @@ class PetCore:
         raise NotImplementedError
 
     def _quit(self) -> None:
+        raise NotImplementedError
+
+    def _warp_pointer(self, x: int, y: int) -> None:
+        raise NotImplementedError
+
+    def _buttons_down(self) -> bool:
         raise NotImplementedError

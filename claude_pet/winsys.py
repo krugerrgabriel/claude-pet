@@ -246,6 +246,21 @@ def focus_session(claude_pid: int, project: str = "") -> bool:
     return bring_to_front(hwnd) if hwnd else False
 
 
+# ---------------------------------------------------------------- mouse (modo troll)
+user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
+user32.GetAsyncKeyState.restype = ctypes.c_short
+user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+
+
+def set_cursor(x: int, y: int) -> None:
+    user32.SetCursorPos(int(x), int(y))
+
+
+def mouse_buttons_down() -> bool:
+    """Botão esquerdo, direito ou do meio apertado agora."""
+    return any(user32.GetAsyncKeyState(vk) & 0x8000 for vk in (0x01, 0x02, 0x04))
+
+
 # ---------------------------------------------------------------- idioma
 def ui_language() -> str:
     """Idioma da interface do Windows: 0x16 é o código primário do português."""
