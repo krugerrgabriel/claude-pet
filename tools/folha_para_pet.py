@@ -65,6 +65,12 @@ SHEETS = {
         "bg_warm": 3,
         "cuts": {(7, k): 863 for k in range(8)},     # a mão do "pendurado" encosta nos pés da "atenção"
     },
+    "robo_faisca": {                                 # a folha já passada por tools/repinta_faisca.py
+        "cols": [163, 312, 473, 623, 786, 955, 1116, 1274, 1423],
+        "rows": [0, 115, 228, 343, 457, 560, 658, 761, 882, 1024],
+        "src": 140,
+        "fixed": (3, 8), "center_fixed": True,
+    },
 }
 MARGIN = 45                      # quanto além da célula procurar pedaços dela (balão, pulo)
 

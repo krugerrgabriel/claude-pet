@@ -63,6 +63,7 @@ Not into robots? Right click → **Character**. Every character does everything 
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
 | <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol** (scarf duck), a chubby golden duckling in a blue scarf, made from a sprite sheet; every now and then he gets confused, with spiral eyes | No light: every state has its own scene |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, also from a sprite sheet | No light: every state has its own scene |
+| <img src="docs/chars/robo_faisca.gif" width="300"> | **Robô Faísca** (spark bot), a blue and red robot with cyan eyes, a striped crest and two side antennas, also from a sprite sheet | No light: every state has its own scene |
 
 The sprite sheet characters move from one frame to the next with a smooth transition (crossfade). Rather have it frame by frame? Right click → **Animation** → **Frame by frame** (each character keeps its own choice). To make one from your own sheet, see `tools/folha_para_pet.py`.
 
@@ -176,7 +177,7 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol` or `capivara_dev` (the menu saves it here) |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` or `robo_faisca` (the menu saves it here) |
 | `smooth_anim` | Smooth animation per sprite sheet character: `{"pato_cachecol": false}` = frame by frame; the **Animation** menu saves it here |
 | `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
 | `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
