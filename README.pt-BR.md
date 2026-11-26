@@ -61,7 +61,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | <img src="docs/chars/pato.gif" width="300"> | **Patinho**, gingando de cachecol | Cachecol no pescoço |
 | <img src="docs/chars/dragao.gif" width="300"> | **Dragão**, levanta voo e fica voando pela tela enquanto o Claude trabalha | Brasa no peito (e o fogo) |
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola**, sempre meio perdido, com um cacho em "?" que espeta num "!" quando o Claude precisa de você | Tela do notebook |
-| <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol**, patinho dourado e gordinho de cachecol azul, feito a partir de uma folha de sprites; de vez em quando fica confuso, de olho em espiral | Sem luzinha: cada estado tem a sua cena |
+| <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol**, patinho dourado e gordinho de cachecol azul, feito a partir de uma folha de sprites; de vez em quando fica confuso, de olho em espiral, ou vai pro canto da tela chorar um pouco | Sem luzinha: cada estado tem a sua cena |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev**, de fone, óculos e notebook, também de folha de sprites | Sem luzinha: cada estado tem a sua cena |
 
 Os personagens de folha de sprites passam de um quadro pro outro com uma transição suave (crossfade). Prefere quadro a quadro? Botão direito → **Animação** → **Quadro a quadro** (a escolha é de cada personagem). Pra criar um a partir da sua própria folha, veja `tools/folha_para_pet.py`.
@@ -190,6 +190,7 @@ Só se quiser: tudo funciona sem configurar nada.
 | `work_hold` | Segundos mínimos em "trabalhando" depois de uma ferramenta, pra não ficar piscando entre pensar e trabalhar (padrão 5) |
 | `monitor` | Índice do monitor, `-1` = principal |
 | `confused_every` | Personagens com animação de confuso (Pato de Cachecol): em média a cada tantos segundos ele larga o que está fazendo e fica confuso (padrão 80; nunca dormindo; `0` desliga) |
+| `cry_every` | Personagens que choram (Pato de Cachecol): em média a cada tantos segundos, com o Claude parado ou esperando você (terminou), ele vai pro canto da tela mais perto, vira pra parede e chora um pouco; o Claude começar alguma coisa ou um carinho acabam com o choro (padrão 180; `0` desliga) |
 
 Todas as chaves são opcionais. Reinicie o Bit depois de editar.
 </details>

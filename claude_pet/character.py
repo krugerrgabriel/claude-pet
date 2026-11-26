@@ -22,6 +22,7 @@ from typing import Callable
 from .config import Config
 
 GRAVITY = 2200.0
+CRY_TIME = (6.0, 9.0)   # segundos que chora no canto (sorteado entre os dois)
 
 
 @dataclass
@@ -79,6 +80,10 @@ class Pet:
         self.forced_sleep = False   # "botar pra dormir": fica dormindo até o próximo prompt
         self.confused_until = 0.0   # tocando a animação "confused" (personagens que têm) até aqui
         self.next_confused = 0.0    # quando fica confuso de novo (0 = ainda não sorteou)
+        # quando vai pro canto chorar (sorteado já na partida: o tempo do Claude trabalhando também conta,
+        # e ele chora no primeiro momento parado ou esperando depois disso)
+        self.next_cry = time.monotonic() + self.rng.uniform(0.5, 1.5) * cfg.cry_every if cfg.cry_every else 0.0
+        self.cry_side = 1           # canto onde chora: -1 esquerdo, 1 direito (virado pra parede)
 
         self.anim = "dangle"
         self.anim_started = time.monotonic()
@@ -189,6 +194,8 @@ class Pet:
     def cheer(self, seconds: float = 2.5) -> None:
         if self.forced_sleep:
             return
+        if self.idle_action in ("to_corner", "cry"):       # chorando no canto: o carinho consola
+            self.idle_action, self.action_until = "pause", time.monotonic() + seconds
         self.happy_until = time.monotonic() + seconds
         self.last_activity = time.monotonic()
 
@@ -413,7 +420,7 @@ class Pet:
                 if not self.skin.self_hop:
                     self.jump = abs(math.sin(now * 9)) * 14
                 return "celebrate", 0
-            return "waiting", 0
+            return self._cry(dt, now) or ("waiting", 0)      # esperando você: pode ir chorar no canto
         if st == "working":
             return "work", 0
         if st == "thinking":
@@ -426,6 +433,10 @@ class Pet:
             return "think", 0
 
         # ---- ocioso ----
+        crying = self._cry(dt, now)
+        if crying:
+            return crying
+
         near = pointer and math.hypot(pointer[0] - cx, pointer[1] - cy) < cfg.notice_radius
         if near:
             self.last_activity = now
@@ -449,6 +460,35 @@ class Pet:
         if resting and self.on_floor:
             return "sit", 0
         return "stand", 0
+
+    def _cry(self, dt: float, now: float) -> tuple[str, int] | None:
+        """De vez em quando, com o Claude parado ou esperando você (terminou, depois da comemoração), vai pro
+        canto da tela mais perto, vira pra parede e chora um pouco ("cry"). Só nos personagens que têm essa
+        animação, só saindo do chão e acordado. O Claude mudar de status (ver _update_status) ou um carinho
+        (ver cheer) acabam com o choro."""
+        every = self.cfg.cry_every
+        if not every or not self.skin.has_anim("cry"):
+            return None
+        if self.idle_action == "to_corner":
+            self.last_activity = now
+            corner = 0.0 if self.cry_side < 0 else self.seg[0] - 1
+            if not self._walk_towards(corner, dt, self.cfg.walk_speed):
+                return "walk", self.direction
+            self.idle_action, self.action_until = "cry", now + self.rng.uniform(*CRY_TIME)
+        if self.idle_action == "cry":
+            if now < self.action_until:
+                self.last_activity = now
+                return "cry", self.cry_side
+            self.idle_action, self.action_until = "pause", now + self.rng.uniform(1.5, 3)
+            return None
+        if not self.next_cry:
+            self.next_cry = now + self.rng.uniform(0.5, 1.5) * every
+        if now < self.next_cry or not self.on_floor or self.idle_action == "sleep":
+            return None
+        self.next_cry = now + self.rng.uniform(0.5, 1.5) * every
+        self.cry_side = -1 if self.s < self.seg[0] / 2 else 1
+        self.idle_action = "to_corner"
+        return self._cry(dt, now)
 
     def _pick_idle_action(self, now: float) -> None:
         r = self.rng.random()

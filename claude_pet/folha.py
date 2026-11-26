@@ -63,6 +63,21 @@ class Folha:
         """Liga (padrão) ou desliga o crossfade. O número de quadros e o ritmo não mudam."""
         self.smooth = bool(on)
 
+    def derive(self, name, base, paint, flip=()):
+        """Quadro novo `name`, feito em código: o quadro `base` da folha com as caixas `flip` ((x0, y0, x1, y1),
+        inclusivas) viradas de cabeça pra baixo e `paint` ({(x, y): 0xRRGGBB}, em pixels do quadro) por cima.
+        Pra animação que a folha não tem, montada a partir de um quadro dela."""
+        src = self._frame(base)
+        pixels, n = list(src), self.size
+        for x0, y0, x1, y1 in flip:
+            for y in range(y0, y1 + 1):
+                pixels[y * n + x0:y * n + x1 + 1] = src[(y0 + y1 - y) * n + x0:(y0 + y1 - y) * n + x1 + 1]
+        for (x, y), c in paint.items():
+            if 0 <= x < self.size and 0 <= y < self.size:
+                pixels[y * self.size + x] = c
+        self._base[name] = pixels
+        self._cache.clear()
+
     def _frame(self, name):
         """Cor de cada pixel do quadro da folha, 0xRRGGBB, ou -1 (transparente)."""
         got = self._base.get(name)
