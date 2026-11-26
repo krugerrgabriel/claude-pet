@@ -61,9 +61,7 @@ Not into robots? Right click → **Settings…** and pick another one. Every cha
 | <img src="docs/chars/pato.gif" width="300"> | **Patinho** (duckling), waddling in a scarf | Scarf around its neck |
 | <img src="docs/chars/dragao.gif" width="300"> | **Dragão** (dragon), takes off and flies around the screen while Claude works | Ember on its chest (and its fire) |
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
-| <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol** (scarf duck), a chubby golden duckling in a blue scarf, made from a sprite sheet; every now and then he gets confused, with spiral eyes, or walks to a corner of the screen to cry a little | No light: every state has its own scene |
-| <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, also from a sprite sheet | No light: every state has its own scene |
-| <img src="docs/chars/robo_faisca.gif" width="300"> | **Robô Faísca** (spark bot), a blue and red robot with cyan eyes, a striped crest and two side antennas, also from a sprite sheet | No light: every state has its own scene |
+| <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, made from a sprite sheet | No light: every state has its own scene |
 
 To make a character from your own sprite sheet, see `tools/folha_para_pet.py`.
 
@@ -179,7 +177,7 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` or `robo_faisca` (the **Settings** window saves it here) |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso` or `capivara_dev` (the **Settings** window saves it here) |
 | `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Settings** window saves it here) |
 | `language` | `auto` (follows the system language), `pt` or `en`; the **Settings** window saves it here |
 | `scale` | Size of each sprite pixel (3 ≈ 60 px tall) |
@@ -191,8 +189,6 @@ Only if you want to: everything works out of the box.
 | `work_hold` | Minimum seconds he stays "working" after a tool runs, so he doesn't flicker between thinking and working (default 5) |
 | `monitor` | Monitor index, `-1` = primary |
 | `type_along` | `true` (default): while Claude is idle and you're typing, he types along |
-| `confused_every` | Characters with a confused animation (Scarf Duck): on average every this many seconds he drops what he's doing and gets confused (default 80; never while asleep; `0` turns it off) |
-| `cry_every` | Characters that cry (Scarf Duck): on average every this many seconds, while Claude is idle or done and waiting for you, he walks to the nearest corner of the screen, faces the wall and cries a little; Claude starting something or petting him ends it (default 180; `0` turns it off) |
 
 All keys are optional. Restart Bit after editing.
 </details>
