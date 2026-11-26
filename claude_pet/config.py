@@ -21,9 +21,9 @@ class Config:
     # Visual
     pet_name: str = ""             # vazio = "Seu pet" / "Your pet"; muda pelo menu "Mudar nome…"
     language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
-    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, pato_cachecol, capivara_dev
+    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, pato_cachecol, capivara_dev, robo_faisca
     smooth_anim: dict = field(default_factory=dict)   # personagem -> false = animação quadro a quadro,
-                                   # sem crossfade (pato_cachecol, capivara_dev); muda pelo menu "Animação"
+                                   # sem crossfade (pato_cachecol, capivara_dev, robo_faisca); muda pelo menu "Animação"
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"
