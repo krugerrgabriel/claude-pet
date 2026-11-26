@@ -455,7 +455,8 @@ class WindowsPortTest(unittest.TestCase):
 
         skin = skins.load("capivara_dev")
         fps, count = skin.anim_info("walk")
-        self.assertEqual(count, 8)                       # 8 quadros da folha, sem quadros intermediários
+        self.assertEqual(count, 2)                       # 2 quadros da folha, sem quadros intermediários
+        self.assertEqual(skin.anim_info("stand")[1], 1)  # parada não "ferve": um quadro só
         frames = [raster.render(skin, "walk", i, 0, "idle", 3, "#5ec4b6", 0.0, 1, 0) for i in range(count)]
         self.assertNotEqual(frames[0], frames[1])
         f = Fake()
