@@ -63,6 +63,7 @@ Não curtiu robô? Botão direito → **Personagem**. Todos fazem tudo que o Bit
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola**, sempre meio perdido, com um cacho em "?" que espeta num "!" quando o Claude precisa de você | Tela do notebook |
 | <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol**, patinho dourado e gordinho de cachecol azul, feito a partir de uma folha de sprites; de vez em quando fica confuso, de olho em espiral, ou vai pro canto da tela chorar um pouco | Sem luzinha: cada estado tem a sua cena |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev**, de fone, óculos e notebook, também de folha de sprites | Sem luzinha: cada estado tem a sua cena |
+| <img src="docs/chars/robo_faisca.gif" width="300"> | **Robô Faísca**, robozinho azul e vermelho, de olhos azul-claros, crista listrada e duas antenas laterais, também de folha de sprites | Sem luzinha: cada estado tem a sua cena |
 
 Os personagens de folha de sprites passam de um quadro pro outro com uma transição suave (crossfade). Prefere quadro a quadro? Botão direito → **Animação** → **Quadro a quadro** (a escolha é de cada personagem). Pra criar um a partir da sua própria folha, veja `tools/folha_para_pet.py`.
 
@@ -79,6 +80,7 @@ Os personagens de folha de sprites passam de um quadro pro outro com uma transi�
 | 🧗 **Anda por tudo** | Chão, paredes e teto do monitor, respeitando a dock e a barra do topo |
 | 🤹 **Física** | Arraste e arremesse, ele cai de volta no chão. Balança como pêndulo enquanto você segura. Jogado contra a borda que encosta em outro monitor, atravessa pra ele |
 | 💤 **Humores** | Repara no seu cursor, gosta de carinho ❤, dorme quando nada está acontecendo |
+| ⌨️ **Digita junto** | Com o Claude parado, se você está digitando, ele digita junto no notebook. Funciona até sem o Claude Code |
 | 😈 **Modo troll** | Desligado por padrão; liga pelo menu. De vez em quando ele rouba o cursor e sai correndo com ele, ou se pendura nele e deixa o mouse pesado. Nunca com botão do mouse apertado nem quando o Claude precisa de você, e um puxão forte faz ele largar |
 | 👻 **Nunca atrapalha** | O clique atravessa tudo menos o próprio Bit. Dá pra esconder por 30 min ou 2 h no menu |
 | 🧹 **Se limpa sozinho** | Sessões cujo processo `claude` morreu são esquecidas automaticamente |
@@ -177,7 +179,7 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol` ou `capivara_dev` (o menu grava aqui) |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` ou `robo_faisca` (o menu grava aqui) |
 | `smooth_anim` | Animação suave por personagem de folha de sprites: `{"pato_cachecol": false}` = quadro a quadro; o menu **Animação** grava aqui |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; o menu **Mudar nome…** grava aqui) |
 | `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; o menu **Idioma** grava aqui |
@@ -189,6 +191,7 @@ Só se quiser: tudo funciona sem configurar nada.
 | `done_linger` | Segundos que o "terminou ✓" fica se você não clicar |
 | `work_hold` | Segundos mínimos em "trabalhando" depois de uma ferramenta, pra não ficar piscando entre pensar e trabalhar (padrão 5) |
 | `monitor` | Índice do monitor, `-1` = principal |
+| `type_along` | `true` (padrão): com o Claude parado e você digitando, ele digita junto |
 | `confused_every` | Personagens com animação de confuso (Pato de Cachecol): em média a cada tantos segundos ele larga o que está fazendo e fica confuso (padrão 80; nunca dormindo; `0` desliga) |
 | `cry_every` | Personagens que choram (Pato de Cachecol): em média a cada tantos segundos, com o Claude parado ou esperando você (terminou), ele vai pro canto da tela mais perto, vira pra parede e chora um pouco; o Claude começar alguma coisa ou um carinho acabam com o choro (padrão 180; `0` desliga) |
 
@@ -253,7 +256,7 @@ Remove só os hooks do Bit (com backup do `settings.json` antes), o comando `cla
 claude-pet/
 ├── claude_pet/          ← o pet (python3 -m claude_pet)
 │   └── chars/           ← lagartixa, gosminha, capivara, pato, dragao, pato_confuso (um arquivo cada);
-│                           pato_cachecol e capivara_dev com os quadros num .bin
+│                           pato_cachecol, capivara_dev e robo_faisca com os quadros num .bin
 ├── hooks/               ← o hook do Claude Code
 ├── tests/               ← hook → estado → comportamento
 ├── tools/               ← prévias dos sprites, página de revisão, GIFs do README, conversor de folha de sprites
@@ -268,6 +271,7 @@ claude-pet/
 
 - Tudo fica na sua máquina. **Nenhuma chamada de rede.**
 - O hook guarda só o status da sessão, o nome da ferramenta, a pasta de trabalho e o PID do `claude`. **Nunca seus prompts ou seu código.**
+- Pra digitar junto, o pet só olha **se** tem tecla apertada, nunca **qual**: não guarda nem registra nada do teclado. Desliga com `"type_along": false`.
 - O instalador faz backup do `settings.json` antes de mexer e só adiciona ou remove as entradas do próprio Bit.
 
 ---

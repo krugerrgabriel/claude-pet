@@ -24,6 +24,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "bubble.sleeping": {"pt": "{name} está dormindo até o próximo prompt",
                         "en": "{name} is asleep until your next prompt"},
     "bubble.no_sessions": {"pt": "{name}: nenhuma sessão aberta", "en": "{name}: no open sessions"},
+    "bubble.with_you": {"pt": "{name} está trabalhando junto com você", "en": "{name} is working alongside you"},
     "bubble.one": {"pt": "{name} está {status}", "en": "{name} is {status}"},
     "bubble.chats_one": {"pt": "{n} chat {status}", "en": "{n} chat {status}"},
     "bubble.chats_many": {"pt": "{n} chats {status}", "en": "{n} chats {status}"},
@@ -64,6 +65,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "char.pato_confuso": {"pt": "Pato Pistola", "en": "Mad Duck"},
     "char.pato_cachecol": {"pt": "Pato de Cachecol", "en": "Scarf Duck"},
     "char.capivara_dev": {"pt": "Capivara Dev", "en": "Dev Capybara"},
+    "char.robo_faisca": {"pt": "Robô Faísca", "en": "Spark Bot"},
 }
 
 # nomes das línguas sempre no próprio idioma (assim quem não lê o atual acha o seu)

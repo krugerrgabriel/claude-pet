@@ -10,13 +10,15 @@ Um módulo de personagem em chars/ define:
   HIT           (x, y, w, h) área clicável, em pixels lógicos
   PIVOT         (x, y) ponto por onde o mouse "segura" (pêndulo ao arrastar)
   ANIMS         {animação: (fps, nº de quadros)}; "confused" é opcional: quem tem, de vez em quando
-                para o que está fazendo e toca ela uma vez (ver Pet._confused e confused_every);
+                para o que está fazendo e toca ela algumas vezes (ver Pet._confused e confused_every);
                 "cry" também: quem tem, de vez em quando, com o Claude parado ou esperando você, vai pro canto da tela e
                 chora um pouco (ver Pet._cry e cry_every)
   OVERLAYS      {animação: nome do efeito}            (opcional; padrão em DEFAULT_OVERLAYS)
   OVERLAY_AT    {efeito: (dx, dy)}                    (opcional; desloca o efeito)
   FLIES_WHEN_WORKING  True = trabalhando, sai voando pela tela tocando "work" (opcional)
   REST_SITS     True = no chão, toda pausa é sentado em vez de em pé (opcional; padrão False)
+  SELF_HOP      True = o pulo de "attention"/"celebrate" já está desenhado nos quadros; o pet não pula
+                por conta própria (opcional; padrão False)
   render(pen, anim, frame, look, light)  desenha; `light` é a cor do status (a "luzinha")
   set_smooth(on) liga/desliga o crossfade entre quadros (opcional; quem tem ganha o menu "Animação")
 """
@@ -31,7 +33,7 @@ from . import sprites
 from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 
 ROBOT = "robo"
-ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "pato_cachecol", "capivara_dev"]
+ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "pato_cachecol", "capivara_dev", "robo_faisca"]
 
 ANIM_NAMES = ["stand", "walk", "sit", "sleep", "curious", "happy", "think", "think_walk", "work",
               "attention", "celebrate", "waiting", "dangle"]
@@ -151,6 +153,7 @@ class CharSkin(Skin):
         self.pivot = m.PIVOT
         self.pace_thinking = getattr(m, "PACE_THINKING", True)
         self.rest_sits = getattr(m, "REST_SITS", False)
+        self.self_hop = getattr(m, "SELF_HOP", False)
         self.side_view = getattr(m, "SIDE_VIEW", False)
         self.flies = getattr(m, "FLIES_WHEN_WORKING", False)
         self.overlays = {**DEFAULT_OVERLAYS, **getattr(m, "OVERLAYS", {})}

@@ -21,9 +21,9 @@ class Config:
     # Visual
     pet_name: str = ""             # vazio = "Seu pet" / "Your pet"; muda pelo menu "Mudar nome…"
     language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
-    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, pato_cachecol, capivara_dev
+    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, pato_cachecol, capivara_dev, robo_faisca
     smooth_anim: dict = field(default_factory=dict)   # personagem -> false = animação quadro a quadro,
-                                   # sem crossfade (pato_cachecol, capivara_dev); muda pelo menu "Animação"
+                                   # sem crossfade (pato_cachecol, capivara_dev, robo_faisca); muda pelo menu "Animação"
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"
@@ -49,6 +49,9 @@ class Config:
                                       # segundos (sorteado entre metade e 1,5x) fica confuso; 0 = nunca
     cry_every: float = 180.0          # personagens com animação "cry": em média a cada tantos segundos, com o
                                       # Claude parado ou esperando você, vai pro canto da tela e chora um pouco; 0 = nunca
+
+    # Com o Claude parado, o pet digita junto com você
+    type_along: bool = True           # você digitando → pet digita junto (só vê SE tem tecla apertada, nunca qual)
 
     extra: dict = field(default_factory=dict)
 

@@ -30,6 +30,8 @@ user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
 user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
 user32.GetWindow.restype = wintypes.HWND
 user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
+user32.GetAsyncKeyState.restype = ctypes.c_short
+user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
 kernel32.GetConsoleWindow.restype = wintypes.HWND
 kernel32.OpenProcess.restype = wintypes.HANDLE
 kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
@@ -99,6 +101,22 @@ def monitors() -> list[tuple[tuple[int, int, int, int], tuple[int, int, int, int
 
     user32.EnumDisplayMonitors(None, None, proc_type(cb), 0)
     return out
+
+
+# teclas de digitar: backspace, tab, enter, espaço, 0-9, A-Z, teclado numérico e pontuação (sem
+# modificadores, setas nem botões do mouse)
+TYPING_KEYS = ([0x08, 0x09, 0x0D, 0x20] + list(range(0x30, 0x3A)) + list(range(0x41, 0x5B))
+               + list(range(0x60, 0x70)) + list(range(0xBA, 0xC1)) + list(range(0xDB, 0xE0)))
+
+
+def typing_keys_down() -> int:
+    """Máscara de bits de quais teclas de digitar estão apertadas agora. O pet só compara com a
+    anterior pra contar teclas novas e joga fora: não guarda, não registra e não traduz em letras."""
+    mask = 0
+    for i, vk in enumerate(TYPING_KEYS):
+        if user32.GetAsyncKeyState(vk) & 0x8000:
+            mask |= 1 << i
+    return mask
 
 
 # ---------------------------------------------------------------- processos

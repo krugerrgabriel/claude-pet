@@ -1,9 +1,10 @@
 """O que a janela do pet faz e que não depende de toolkit (GTK no Linux, Tk no Windows):
 ler as sessões, dispensar o "terminou" no hover, dormir/acordar, texto do balão, clique e menu.
+Com o Claude parado, você digitando faz o pet digitar junto.
 
 A janela concreta herda `PetCore` e fornece: self.cfg, self.store, self.pet, self.bubble (com `.rect`),
-self.skin, self.size, `_pointer()`, `_apply_skin()`, `_hide_for(min)` e `_quit()`; pro modo troll,
-`_warp_pointer(x, y)` e `_buttons_down()`.
+self.skin, self.size, `_pointer()`, `_apply_skin()`, `_hide_for(min)` e `_quit()`; opcionalmente
+`_keys_down()` (digitar junto) e, pro modo troll, `_warp_pointer(x, y)` e `_buttons_down()`.
 """
 from __future__ import annotations
 
@@ -15,6 +16,12 @@ from .character import Frame
 from .i18n import t
 from .state import Session
 from .troll import Troll
+
+# Você digitando (sem o Claude fazendo nada): TYPE_KEYS teclas novas em TYPE_WINDOW segundos, e o pet
+# continua digitando até TYPE_HOLD segundos depois da última (pausa entre palavras não para ele).
+TYPE_KEYS = 4
+TYPE_WINDOW = 2.0
+TYPE_HOLD = 4.0
 
 
 def _status(st: str) -> str:
@@ -53,7 +60,37 @@ class PetCore:
         self._just_seen = None      # (sessão, monotonic) do "terminou" dispensado no hover: o clique ainda abre
         self._quiet_hover = False   # acabou de dispensar o "terminou": sem balão até o mouse sair
         self.sleep_since = 0.0      # time.time() de quando foi botado pra dormir
+        self.typing = False         # você está digitando
+        self._keys = 0              # máscara de "tem tecla apertada" da leitura anterior (nunca guardada)
+        self._presses: list[float] = []
+        self._typing_until = 0.0
         self._troll: Troll | None = None
+
+    # ------------------------------------------------------------ sem o Claude: você digitando
+    def _pet_status(self, now: float) -> str:
+        """O status que o pet mostra: o do Claude. Com o Claude parado e você digitando = "working"
+        (o pet digita junto)."""
+        self._watch_user(now)
+        status = self.top.status if self.top else "idle"
+        if status == "idle" and self.typing:
+            return "working"
+        return status
+
+    def _watch_user(self, now: float) -> None:
+        keys = self._keys_down() if self.cfg.type_along else None
+        if keys is not None:
+            new = bin(keys & ~self._keys).count("1")   # teclas que desceram desde a última olhada
+            self._keys = keys
+            if new:
+                self._presses = [p for p in self._presses if now - p < TYPE_WINDOW] + [now] * new
+                if len(self._presses) >= TYPE_KEYS:
+                    self._typing_until = now + TYPE_HOLD
+        self.typing = bool(self.cfg.type_along) and now < self._typing_until
+
+    def _keys_down(self) -> int | None:
+        """Máscara de bits das teclas apertadas agora (só pra contar teclas novas; o que cada bit é não
+        importa), ou None se não dá pra saber. Cada toolkit implementa."""
+        return None
 
     # ------------------------------------------------------------ sessões
     def _poll(self, now: float) -> None:
@@ -145,6 +182,8 @@ class PetCore:
         name = self.cfg.display_name
         if self.pet.forced_sleep:
             return t("bubble.sleeping", name=name)
+        if self.typing and not any(s.status != "idle" for s in self.sessions):
+            return t("bubble.with_you", name=name)
         if not self.sessions:
             return t("bubble.no_sessions", name=name)
         if len(self.sessions) == 1:

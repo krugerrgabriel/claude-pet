@@ -22,6 +22,7 @@ from typing import Callable
 from .config import Config
 
 GRAVITY = 2200.0
+CONFUSED_TIMES = 3      # quando fica confuso, toca a animação "confused" tantas vezes seguidas
 CRY_TIME = (6.0, 9.0)   # segundos que chora no canto (sorteado entre os dois)
 
 
@@ -267,7 +268,7 @@ class Pet:
 
     def _confused(self, now: float) -> bool:
         """De vez em quando, do nada, fica confuso: larga o que está fazendo (andar, pensar, trabalhar,
-        até o carinho), toca "confused" uma vez e volta. Só nos personagens que têm essa animação, só
+        até o carinho), toca "confused" CONFUSED_TIMES vezes seguidas e volta. Só nos personagens que têm essa animação, só
         parado numa borda (no colo do mouse, caindo ou voando não) e nunca dormindo."""
         every = self.cfg.confused_every
         if not every or not self.skin.has_anim("confused"):
@@ -282,7 +283,7 @@ class Pet:
         if self.anim == "sleep":                 # dormindo: deixa pra próxima
             return False
         fps, count = self.skin.anim_info("confused")
-        self.confused_until = now + count / fps
+        self.confused_until = now + CONFUSED_TIMES * count / fps
         return True
 
     def _swing(self, dt: float) -> None:

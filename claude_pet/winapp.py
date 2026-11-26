@@ -181,6 +181,12 @@ class TkPetApp(PetCore):
             return None
         return float(x), float(y)
 
+    def _keys_down(self) -> int | None:
+        try:
+            return winsys.typing_keys_down()
+        except OSError:
+            return None
+
     def _warp_pointer(self, x: int, y: int) -> None:
         if WINDOWS:
             winsys.set_cursor(x, y)
@@ -211,7 +217,7 @@ class TkPetApp(PetCore):
 
         pointer = self._pointer()
         self._dismiss_done_on_hover(pointer, now)
-        status = self.top.status if self.top else "idle"
+        status = self._pet_status(now)
         pointer = self._troll_step(now, dt, pointer, status)
         frame = self.pet.tick(dt, status, pointer)
 

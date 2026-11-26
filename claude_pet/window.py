@@ -23,6 +23,35 @@ from .state import StateStore  # noqa: E402
 
 DEBUG = bool(os.environ.get("CLAUDE_PET_DEBUG"))
 
+
+class _XKeys:
+    """Tem tecla apertada agora? (X11, XQueryKeymap numa conexão só nossa; nunca dá erro de X).
+
+    Devolve só a máscara de bits do momento: o pet compara com a anterior pra contar teclas novas e
+    joga fora. Não guarda, não registra e não traduz em letras."""
+
+    def __init__(self):
+        self._dpy = None
+        try:
+            import ctypes
+            import ctypes.util
+            lib = ctypes.CDLL(ctypes.util.find_library("X11") or "libX11.so.6")
+            lib.XOpenDisplay.restype = ctypes.c_void_p
+            lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+            lib.XQueryKeymap.argtypes = [ctypes.c_void_p, ctypes.c_char * 32]
+            self._buf = (ctypes.c_char * 32)()
+            self._lib = lib
+            self._dpy = lib.XOpenDisplay(None)
+        except (OSError, AttributeError):
+            self._dpy = None
+
+    def down(self) -> int | None:
+        if not self._dpy:
+            return None
+        self._lib.XQueryKeymap(self._dpy, self._buf)
+        return int.from_bytes(bytes(self._buf), "little")
+
+
 def _transparent(win: Gtk.Window) -> None:
     screen = win.get_screen()
     visual = screen.get_rgba_visual()
@@ -105,6 +134,7 @@ class PetWindow(PetCore, Gtk.Window):
         self._init_core()
         self._shape_rot = None
         self._last_dbg = 0.0
+        self._xkeys = _XKeys() if cfg.type_along else None
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.BUTTON_RELEASE_MASK
                         | Gdk.EventMask.POINTER_MOTION_MASK)
@@ -149,6 +179,9 @@ class PetWindow(PetCore, Gtk.Window):
                 return self._monitor_rect(mon)
         return None
 
+    def _keys_down(self) -> int | None:
+        return self._xkeys.down() if self._xkeys else None
+
     def _pointer(self) -> tuple[float, float] | None:
         seat = self.display.get_default_seat()
         if not seat:
@@ -184,7 +217,7 @@ class PetWindow(PetCore, Gtk.Window):
 
         pointer = self._pointer()
         self._dismiss_done_on_hover(pointer, now)
-        status = self.top.status if self.top else "idle"
+        status = self._pet_status(now)
         pointer = self._troll_step(now, dt, pointer, status)
         frame = self.pet.tick(dt, status, pointer)
 

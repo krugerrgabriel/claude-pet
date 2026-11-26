@@ -63,6 +63,7 @@ Not into robots? Right click → **Character**. Every character does everything 
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
 | <img src="docs/chars/pato_cachecol.gif" width="300"> | **Pato de Cachecol** (scarf duck), a chubby golden duckling in a blue scarf, made from a sprite sheet; every now and then he gets confused, with spiral eyes, or walks to a corner of the screen to cry a little | No light: every state has its own scene |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, also from a sprite sheet | No light: every state has its own scene |
+| <img src="docs/chars/robo_faisca.gif" width="300"> | **Robô Faísca** (spark bot), a blue and red robot with cyan eyes, a striped crest and two side antennas, also from a sprite sheet | No light: every state has its own scene |
 
 The sprite sheet characters move from one frame to the next with a smooth transition (crossfade). Rather have it frame by frame? Right click → **Animation** → **Frame by frame** (each character keeps its own choice). To make one from your own sheet, see `tools/folha_para_pet.py`.
 
@@ -79,6 +80,7 @@ The sprite sheet characters move from one frame to the next with a smooth transi
 | 🧗 **Walks everywhere** | Floor, walls and ceiling of your monitor, respecting the dock and top bar |
 | 🤹 **Physics** | Drag and throw him, he falls back to the floor. Swings like a pendulum while held. Throw him at an edge shared with another monitor and he flies across |
 | 💤 **Moods** | Notices your cursor, enjoys being petted ❤, sleeps when nothing is happening |
+| ⌨️ **Types along** | While Claude is idle, if you're typing, he types along on his laptop. Works even without Claude Code |
 | 😈 **Troll mode** | Off by default; turn it on from the menu. Every so often he steals your cursor and runs off with it, or hangs from it and makes the mouse heavy. Never while a mouse button is held or when Claude needs you, and a hard yank makes him let go |
 | 👻 **Never in the way** | Clicks go through everything except Bit himself. Hide him for 30 min or 2 h from the menu |
 | 🧹 **Self-cleaning** | Sessions whose `claude` process died are forgotten automatically |
@@ -177,7 +179,7 @@ Only if you want to: everything works out of the box.
 
 | Key | Meaning |
 |---|---|
-| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol` or `capivara_dev` (the menu saves it here) |
+| `skin` | Character: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `pato_cachecol`, `capivara_dev` or `robo_faisca` (the menu saves it here) |
 | `smooth_anim` | Smooth animation per sprite sheet character: `{"pato_cachecol": false}` = frame by frame; the **Animation** menu saves it here |
 | `pet_name` | Name used in the bubbles (empty = "Your pet"; the **Rename…** menu item saves it here) |
 | `language` | `auto` (follows the system language), `pt` or `en`; the **Language** menu saves it here |
@@ -189,6 +191,7 @@ Only if you want to: everything works out of the box.
 | `done_linger` | Seconds the "done ✓" stays if you don't click him |
 | `work_hold` | Minimum seconds he stays "working" after a tool runs, so he doesn't flicker between thinking and working (default 5) |
 | `monitor` | Monitor index, `-1` = primary |
+| `type_along` | `true` (default): while Claude is idle and you're typing, he types along |
 | `confused_every` | Characters with a confused animation (Scarf Duck): on average every this many seconds he drops what he's doing and gets confused (default 80; never while asleep; `0` turns it off) |
 | `cry_every` | Characters that cry (Scarf Duck): on average every this many seconds, while Claude is idle or done and waiting for you, he walks to the nearest corner of the screen, faces the wall and cries a little; Claude starting something or petting him ends it (default 180; `0` turns it off) |
 
@@ -268,6 +271,7 @@ claude-pet/
 
 - Everything stays on your machine. **No network calls.**
 - The hook stores only the session status, the tool name, the working directory and the `claude` process id. **Never your prompts or code.**
+- To type along, the pet only checks **whether** a key is down, never **which** one: nothing from the keyboard is stored or logged. Turn it off with `"type_along": false`.
 - The installer backs up `settings.json` before touching it and only adds or removes Bit's own entries.
 
 ---
