@@ -1,4 +1,4 @@
-"""Vampirinho Axolote: vampiro de capa preta e olhos vermelhos que, de vez em quando, vira um axolote cor-de-rosa.
+"""Vamptadi: vampiro de capa preta e olhos vermelhos que, de vez em quando, vira um axolote cor-de-rosa.
 
 Desenhado a partir de uma folha de sprites: os quadros vêm prontos de frames.bin (gerado por
 `tools/folha_para_pet.py vampiro_axolote ...` a partir da folha de 11 animações x 9 quadros, usada inteira):

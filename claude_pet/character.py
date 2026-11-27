@@ -299,7 +299,7 @@ class Pet:
         return "transform_back" if self.skin.has_anim("transform_back") else "transform"
 
     def _bat(self, now: float) -> str:
-        """De vez em quando se transforma noutro bicho (o Vampirinho Axolote vira axolote): no chão, toca "transform", sai voando pela tela tocando "bat" por
+        """De vez em quando se transforma noutro bicho (o Vamptadi vira axolote): no chão, toca "transform", sai voando pela tela tocando "bat" por
         BAT_TIME, desce até o chão e volta ao normal ("transform_back"). Só nos personagens que têm "transform"
         e "bat", só saindo do chão e acordado, e nunca com o Claude te chamando ou no meio da comemoração
         (se acontecer durante o voo, ele desce na hora). Pego pelo mouse, volta a ser ele mesmo.

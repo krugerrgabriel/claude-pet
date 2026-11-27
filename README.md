@@ -62,7 +62,7 @@ Not into robots? Right click → **Settings…** and pick another one. Every cha
 | <img src="docs/chars/dragao.gif" width="300"> | **Dragão** (dragon), takes off and flies around the screen while Claude works | Ember on its chest (and its fire) |
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola** (mad duck), always a bit lost, with a "?" curl that spikes into a "!" when Claude needs you | Laptop screen |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev** (dev capybara), with headphones, glasses and a laptop, made from a sprite sheet | No light: every state has its own scene |
-| <img src="docs/chars/vampiro_axolote.gif" width="300"> | **Vampirinho Axolote** (axolotl vampire), a little vampire in a black cape, made from a sprite sheet; every now and then he turns into a pink axolotl and swims around the screen | No light: every state has its own scene |
+| <img src="docs/chars/vampiro_axolote.gif" width="300"> | **Vamptadi** (axolotl vampire), a little vampire in a black cape, made from a sprite sheet; every now and then he turns into a pink axolotl and swims around the screen | No light: every state has its own scene |
 
 ### 🎨 Custom characters
 
@@ -194,7 +194,7 @@ Only if you want to: everything works out of the box.
 | `work_hold` | Minimum seconds he stays "working" after a tool runs, so he doesn't flicker between thinking and working (default 5) |
 | `monitor` | Monitor index, `-1` = primary |
 | `type_along` | `true` (default): while Claude is idle and you're typing, he types along |
-| `bat_every` | Vampirinho Axolote only: on average every this many seconds he turns into an axolotl and swims around for 30 seconds (default 65; `0` = never) |
+| `bat_every` | Vamptadi only: on average every this many seconds he turns into an axolotl and swims around for 30 seconds (default 65; `0` = never) |
 
 All keys are optional. Restart Bit after editing.
 </details>

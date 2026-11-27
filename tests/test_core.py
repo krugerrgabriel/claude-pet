@@ -281,7 +281,7 @@ class SkinTest(unittest.TestCase):
 
 
 class BatTest(unittest.TestCase):
-    """Personagem com "transform" e "bat" (o Vampirinho Axolote): de vez em quando se transforma e voa/nada pela tela."""
+    """Personagem com "transform" e "bat" (o Vamptadi): de vez em quando se transforma e voa/nada pela tela."""
 
     def play(self, seconds, status="idle", skin="vampiro_axolote", events=(), **cfg):
         """Roda o pet num relógio de mentira; devolve [(animação, modo), ...] de cada tick.
