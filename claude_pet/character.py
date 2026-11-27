@@ -8,7 +8,7 @@ Movimento:
   - "free": solto (caindo/arremessado) até tocar o chão.
   - "drag": segurado pelo mouse.
   - "troll": controlado pelo modo troll (troll.py) durante uma pegadinha.
-  - "fly": voando pela tela (só personagens com `flies`, enquanto o Claude trabalha).
+  - "fly": voando pela tela (personagens com `flies`, enquanto o Claude trabalha; e quem se transforma, ver _bat).
 Quando o Claude não está ocioso, ele desce para o chão (se estiver em parede/teto, solta e cai).
 """
 from __future__ import annotations
@@ -24,6 +24,7 @@ from .config import Config
 GRAVITY = 2200.0
 CONFUSED_TIMES = 3      # quando fica confuso, toca a animação "confused" tantas vezes seguidas
 CRY_TIME = (6.0, 9.0)   # segundos que chora no canto (sorteado entre os dois)
+BAT_TIME = 30.0         # segundos que voa (ou nada) transformado
 
 
 @dataclass
@@ -85,6 +86,11 @@ class Pet:
         # e ele chora no primeiro momento parado ou esperando depois disso)
         self.next_cry = time.monotonic() + self.rng.uniform(0.5, 1.5) * cfg.cry_every if cfg.cry_every else 0.0
         self.cry_side = 1           # canto onde chora: -1 esquerdo, 1 direito (virado pra parede)
+        # transformado noutro bicho (ver _bat): "" não, "in" se transformando, "fly" voando, "down" descendo pro chão,
+        # "out" voltando ao normal
+        self.bat = ""
+        self.bat_until = 0.0
+        self.next_bat = time.monotonic() + self.rng.uniform(0.5, 1.5) * cfg.bat_every if cfg.bat_every else 0.0
 
         self.anim = "dangle"
         self.anim_started = time.monotonic()
@@ -229,7 +235,8 @@ class Pet:
         look = self.direction
 
         self._swing(dt)
-        wants_fly = self.skin.flies and self.status == "working" and not self.forced_sleep
+        bat = self._bat(now)
+        wants_fly = (self.skin.flies and self.status == "working" and not self.forced_sleep) or bat in ("fly", "down")
         if self.mode == "fly" and not wants_fly:
             self._land()
         elif wants_fly and self.mode in ("edge", "free"):
@@ -248,6 +255,8 @@ class Pet:
                 anim = "dangle"
             elif self.forced_sleep:
                 anim, look = "sleep", 0
+            elif bat:                           # no chão, se transformando ou voltando ao normal
+                anim = "transform" if bat == "in" else self._bat_back()
             elif self._confused(now):
                 anim, look = "confused", 0      # para onde está (não anda) até a animação acabar
             else:
@@ -285,6 +294,50 @@ class Pet:
         fps, count = self.skin.anim_info("confused")
         self.confused_until = now + CONFUSED_TIMES * count / fps
         return True
+
+    def _bat_back(self) -> str:
+        return "transform_back" if self.skin.has_anim("transform_back") else "transform"
+
+    def _bat(self, now: float) -> str:
+        """De vez em quando se transforma noutro bicho (o Vamptadi vira axolote): no chão, toca "transform", sai voando pela tela tocando "bat" por
+        BAT_TIME, desce até o chão e volta ao normal ("transform_back"). Só nos personagens que têm "transform"
+        e "bat", só saindo do chão e acordado, e nunca com o Claude te chamando ou no meio da comemoração
+        (se acontecer durante o voo, ele desce na hora). Pego pelo mouse, volta a ser ele mesmo.
+        Devolve a fase (ver self.bat)."""
+        every = self.cfg.bat_every
+        if not every or not (self.skin.has_anim("transform") and self.skin.has_anim("bat")):
+            self.bat = ""
+            return ""
+        if self.bat and self.mode != ("fly" if self.bat in ("fly", "down") else "edge"):   # mouse, modo troll
+            self.bat = ""
+        busy = self.forced_sleep or self.status == "attention" or (self.status == "done" and now < self.celebrate_until)
+        if self.bat == "in" and now >= self.bat_until:
+            self.bat, self.bat_until = "fly", now + BAT_TIME
+            self._take_off(now)
+        elif self.bat == "fly" and (busy or now >= self.bat_until):
+            self.bat = "down"
+        elif self.bat == "out" and now >= self.bat_until:
+            self.bat = ""
+            self.next_bat = now + self.rng.uniform(0.5, 1.5) * every       # o intervalo conta do pouso
+            self.idle_action, self.action_until = "pause", now + self.rng.uniform(1, 2.5)
+        if self.bat == "down":
+            self.fly_target, self.fly_until = (self.x, self.floor_y + 60), now + 5     # reto pra baixo
+            if self.y >= self.floor_y - 0.5:
+                self._attach_floor()
+                fps, count = self.skin.anim_info(self._bat_back())
+                self.bat, self.bat_until = "out", now + count / fps
+        if self.bat:
+            self.last_activity = now
+            return self.bat
+        if not self.next_bat:
+            self.next_bat = now + self.rng.uniform(0.5, 1.5) * every
+        if (now < self.next_bat or busy or not self.on_floor or self.anim == "sleep"
+                or self.idle_action in ("to_corner", "cry") or now < self.confused_until):
+            return ""
+        self.next_bat = now + self.rng.uniform(0.5, 1.5) * every
+        fps, count = self.skin.anim_info("transform")
+        self.bat, self.bat_until = "in", now + count / fps
+        return self.bat
 
     def _swing(self, dt: float) -> None:
         """Pêndulo: arrastando pra direita, o corpo fica pra trás (inclina pra esquerda) e balança."""
@@ -380,7 +433,7 @@ class Pet:
         self.y = min(max(self.y, a.y), self.floor_y)
         if abs(self.vx) > 20:
             self.direction = 1 if self.vx > 0 else -1
-        return "work", self.direction
+        return ("bat" if self.bat else "work"), self.direction
 
     def _walk_towards(self, target: float, dt: float, speed: float) -> bool:
         p = self.perimeter

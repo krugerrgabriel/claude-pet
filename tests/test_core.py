@@ -280,6 +280,78 @@ class SkinTest(unittest.TestCase):
         self.assertEqual(skins.available()[0], skins.ROBOT)
 
 
+class BatTest(unittest.TestCase):
+    """Personagem com "transform" e "bat" (o Vamptadi): de vez em quando se transforma e voa/nada pela tela."""
+
+    def play(self, seconds, status="idle", skin="vampiro_axolote", events=(), **cfg):
+        """Roda o pet num relógio de mentira; devolve [(animação, modo), ...] de cada tick.
+        events: (segundo, função(pet)) pra mexer nele no meio do caminho; ou (segundo, "status")."""
+        from unittest import mock
+        from claude_pet import character, skins
+        clock = [1000.0]
+        with mock.patch.object(character.time, "monotonic", lambda: clock[0]):
+            pet = Pet(Config(**cfg), Rect(0, 0, 1920, 1080), rng=random.Random(3), skin=skins.load(skin))
+            pet._attach_floor()
+            seen, events = [], sorted(events, key=lambda e: e[0])
+            for i in range(int(seconds * 30)):
+                clock[0] += 1 / 30
+                while events and events[0][0] <= i / 30:
+                    what = events.pop(0)[1]
+                    if callable(what):
+                        what(pet)
+                    else:
+                        status = what
+                f = pet.tick(1 / 30, status, None)
+                seen.append((f.anim, pet.mode))
+        return pet, seen
+
+    @staticmethod
+    def phases(seen):
+        out = []
+        for anim, _mode in seen:
+            if not out or out[-1] != anim:
+                out.append(anim)
+        return out
+
+    def test_transforms_flies_lands_and_turns_back(self):
+        pet, seen = self.play(90, bat_every=10, cry_every=0, climb_chance=0)
+        ph = self.phases(seen)
+        i = ph.index("transform")
+        self.assertEqual(ph[i:i + 3], ["transform", "bat", "transform_back"])
+        self.assertTrue(all(mode == "fly" for anim, mode in seen if anim == "bat"))
+        self.assertTrue(all(mode == "edge" for anim, mode in seen if anim.startswith("transform")))
+        flying = sum(anim == "bat" for anim, _ in seen[:seen.index(("transform_back", "edge"))]) / 30
+        self.assertTrue(30 <= flying <= 30 + 12, flying)          # o voo + a descida até o chão
+        after = seen[seen.index(("transform_back", "edge")):]
+        back = next(anim for anim, _ in after if anim != "transform_back")
+        self.assertIn(back, ("stand", "sit", "walk"))              # voltou ao normal, no chão
+
+    def test_only_characters_with_the_animations_and_can_be_turned_off(self):
+        for kw in ({"skin": "robo", "bat_every": 5}, {"skin": "dragao", "bat_every": 5}, {"bat_every": 0}):
+            _pet, seen = self.play(40, cry_every=0, **kw)
+            self.assertFalse({"transform", "bat", "transform_back"} & {a for a, _ in seen}, kw)
+
+    def test_comes_down_when_claude_needs_you(self):
+        pet, seen = self.play(20, bat_every=2, cry_every=0, climb_chance=0, events=[(8, "attention")])
+        anims = [a for a, _ in seen]
+        self.assertIn("bat", anims[:8 * 30])                        # estava voando
+        self.assertEqual(anims[-1], "attention")                    # desceu, voltou ao normal e te chama
+        self.assertNotIn("transform", anims[anims.index("attention"):])   # e não vira morcego te chamando
+
+    def test_grabbed_while_flying_is_himself_again(self):
+        def grab(pet):
+            x, y = pet.position()
+            pet.press(x + 40, y + 40)
+        pet, seen = self.play(9, bat_every=2, cry_every=0, climb_chance=0, events=[(8, grab)])
+        self.assertIn(("bat", "fly"), seen[:8 * 30])
+        self.assertEqual(seen[-1], ("dangle", "drag"))
+        self.assertEqual(pet.bat, "")
+
+    def test_never_while_sleeping(self):
+        _pet, seen = self.play(30, bat_every=2, cry_every=0, events=[(0, lambda pet: pet.sleep_now())])
+        self.assertEqual({a for a, _ in seen}, {"sleep"})
+
+
 class SwingTest(unittest.TestCase):
     def test_dragging_right_leans_body_left_then_settles(self):
         from claude_pet import skins
@@ -409,7 +481,8 @@ class WindowsPortTest(unittest.TestCase):
         from claude_pet import raster, skins
         for name in skins.available():
             skin = skins.load(name)
-            extra = tuple((a, 0, 0.0, -1) for a in ("confused", "cry") if skin.has_anim(a))   # opcionais
+            extra = tuple((a, 0, 0.0, -1) for a in ("confused", "cry", "transform", "transform_back", "bat")
+                          if skin.has_anim(a))   # opcionais
             for anim, rot, lean, facing in (("walk", 0, 0.0, -1), ("work", 90, 0.0, 1), ("dangle", 0, 0.3, 1)) + extra:
                 n = skin.canvas * 2
                 surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, n, n)

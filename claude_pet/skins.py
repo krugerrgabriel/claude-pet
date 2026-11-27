@@ -18,7 +18,10 @@ O character.py define:
   PIVOT         (x, y) ponto por onde o mouse "segura" (pêndulo ao arrastar)
   ANIMS         {animação: (fps, nº de quadros)} com todas de ANIM_NAMES; "confused" e "cry" são opcionais:
                 quem tem "confused", de vez em quando para o que está fazendo e toca ela (ver Pet._confused e
-                confused_every); quem tem "cry", de vez em quando vai pro canto da tela e chora (Pet._cry, cry_every)
+                confused_every); quem tem "cry", de vez em quando vai pro canto da tela e chora (Pet._cry, cry_every);
+                quem tem "transform" e "bat", de vez em quando se transforma (toca "transform"), voa pela tela
+                tocando "bat", pousa e volta ao normal (toca "transform_back" ou, se não tiver, "transform" de
+                novo): ver Pet._bat e bat_every
   render(pen, anim, frame, look, light)  desenha; `light` é a cor do status (a "luzinha"); `pen.body` é a
                 cor do corpo escolhida na config (só o Bit usa)
   SIDE_VIEW     True = desenhado de perfil olhando pra direita; espelha ao andar pra esquerda (opcional)
@@ -46,7 +49,7 @@ from .pixel import CANVAS, STATUS_COLORS, Pen, overlay
 FORMAT = 1
 ROBOT = "robo"
 BUILTIN_DIR = Path(__file__).resolve().parent / "characters"
-ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "capivara_dev"]
+ORDER = [ROBOT, "lagartixa", "gosminha", "capivara", "pato", "dragao", "pato_confuso", "capivara_dev", "vampiro_axolote"]
 ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
 
 ANIM_NAMES = ["stand", "walk", "sit", "sleep", "curious", "happy", "think", "think_walk", "work",

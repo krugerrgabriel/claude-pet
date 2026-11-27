@@ -3,7 +3,7 @@
     python3 tools/folha_para_pet.py <personagem> folha.png claude_pet/characters/<personagem>/frames.bin [previa.png] [nome=tira.png ...]
 
 As linhas da folha, nesta ordem: parado, andando, pensando, trabalhando, dormindo, feliz, comemorando,
-atenção, pendurado. Cada personagem tem a sua configuração em SHEETS (grade da folha e consertos).
+atenção, pendurado (a folha pode ter linhas a mais: `names` na configuração). Cada personagem tem a sua configuração em SHEETS (grade da folha e consertos).
 
 Para cada célula: tira o fundo (preenche a partir da borda por pixels parecidos com o fundo, ou que
 mudam devagar, pra atravessar o brilho/degradê; depois some com bolsões fechados de fundo), fica com os
@@ -38,6 +38,10 @@ HANG = 8                         # a linha do "pendurado": alinha pela mão, em 
 #   patch                  (linha, coluna) com defeito -> vizinho de onde copiar a parte de baixo
 #   cuts                   (linha, coluna) -> y onde o de baixo encosta no de cima: corta ali
 #   bg_warm                fundo quente: só tom avermelhado conta como fundo (salva roupa cinza/preta)
+#   names                  nomes das linhas, quando a folha tem linhas a mais que as 9 de NAMES
+#   center_each            linhas em que cada quadro fica centrado no próprio desenho (voo)
+#   bg_tol, keep_pockets   desenho escuro em fundo escuro: tolerância menor pro fundo, e o que o contorno
+#                          fecha fica (ver _open_background)
 #   extra                  tiras de uma linha feitas depois (uma animação a mais): nome -> {cols, src};
 #                          na linha de comando, `nome=tira.png`. Cada quadro fica com os pés no chão e
 #                          centrado no personagem; src é na escala da tira (pra ele sair do mesmo tamanho).
@@ -50,6 +54,16 @@ SHEETS = {
         "bg_warm": 3,
         "cuts": {(7, k): 863 for k in range(8)},     # a mão do "pendurado" encosta nos pés da "atenção"
     },
+    "vampiro_axolote": {                         # vampiro que vira axolote e nada
+        "names": NAMES + ["transformacao", "axolote"],
+        "cols": [155, 305, 456, 618, 772, 935, 1092, 1255, 1418],
+        "rows": [0, 109, 215, 320, 413, 500, 587, 660, 752, 840, 927, 1024],
+        "src": 140,
+        "fixed": (3, 8), "center_fixed": True,
+        "center_each": (9, 10),
+        "cuts": {(r, k): y for r, y in ((0, 109), (4, 500), (5, 587), (6, 660), (7, 752), (8, 840)) for k in range(9)},
+        "bg_tol": 12, "keep_pockets": True,      # roupa preta em fundo azul-escuro: só o contorno separa
+    },
 }
 MARGIN = 45                      # quanto além da célula procurar pedaços dela (balão, pulo)
 
@@ -58,10 +72,10 @@ def dist(a, b):
     return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
 
 
-def bg_like(c, ref, warm=None):
+def bg_like(c, ref, warm=None, tol=38):
     """Parecido com o fundo. `warm`: o fundo é quente (vermelho passa o azul em pelo menos `warm`); cinza
     neutro ou azulado (camiseta preta, por exemplo) nunca é fundo."""
-    return dist(c, ref) < 38 and max(c) - min(c) < 60 and (warm is None or c[0] - c[2] >= warm)
+    return dist(c, ref) < tol and max(c) - min(c) < 60 and (warm is None or c[0] - c[2] >= warm)
 
 
 def _flood(w, h, start, ok):
@@ -78,8 +92,46 @@ def _flood(w, h, start, ok):
     return comp
 
 
-def cutout(im, box, warm=None):
-    """Recorte RGBA da caixa, sem o fundo. Devolve (imagem, componentes 8-conectados do que sobrou)."""
+def _open_background(p, w, h, bg, like):
+    """Fundo "aberto", pra folha em que o desenho tem a cor do fundo por dentro do contorno: preenche a
+    partir da borda só por onde o fundo tem folga (o pixel e os 8 vizinhos parecidos com o fundo), então
+    não entra por uma falha de 1 ou 2 px no contorno. Depois encosta no desenho e some com os vãos
+    pequenos que dão pro fundo (entre as faíscas, por exemplo). Preenche `bg`; devolve a fila vazia."""
+    ok = [[like(p[x, y]) for x in range(w)] for y in range(h)]
+    core = [[ok[y][x] and all(ok[b][a] for a in range(max(0, x - 1), min(w, x + 2))
+                              for b in range(max(0, y - 1), min(h, y + 2))) for x in range(w)] for y in range(h)]
+    for row in bg:
+        row[:] = [False] * w
+    q = deque((x, y) for x in range(w) for y in range(h) if (x in (0, w - 1) or y in (0, h - 1)) and core[y][x])
+    for (x, y) in q:
+        bg[y][x] = True
+    while q:
+        x, y = q.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < w and 0 <= ny < h and not bg[ny][nx] and core[ny][nx]:
+                bg[ny][nx] = True
+                q.append((nx, ny))
+    grown = [(x, y) for y in range(h) for x in range(w) if ok[y][x] and not bg[y][x] and any(
+        bg[b][a] for a in range(max(0, x - 1), min(w, x + 2)) for b in range(max(0, y - 1), min(h, y + 2)))]
+    for (x, y) in grown:
+        bg[y][x] = True
+    seen = set()
+    for y in range(h):
+        for x in range(w):
+            if bg[y][x] or not ok[y][x] or (x, y) in seen:
+                continue
+            comp = _flood(w, h, (x, y), lambda a, b: ok[b][a] and not bg[b][a])
+            seen.update(comp)
+            if len(comp) < 60 and any(0 <= a + i < w and 0 <= b + j < h and bg[b + j][a + i]
+                                      for a, b in comp for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                for (a, b) in comp:
+                    bg[b][a] = True
+    return deque()
+
+
+def cutout(im, box, warm=None, tol=38, keep_pockets=False):
+    """Recorte RGBA da caixa, sem o fundo. Devolve (imagem, componentes 8-conectados do que sobrou).
+    `keep_pockets`: o que o contorno fecha fica, mesmo com a cor do fundo (roupa escura em fundo escuro)."""
     cell = im.crop(box)
     w, h = cell.size
     p = cell.load()
@@ -91,22 +143,24 @@ def cutout(im, box, warm=None):
     q.extend((x, y) for y in range(h) for x in (0, w - 1))
     for (x, y) in q:
         bg[y][x] = True
+    if keep_pockets:
+        q = _open_background(p, w, h, bg, lambda c: bg_like(c, ref, warm, tol))
     while q:
         x, y = q.popleft()
         c = p[x, y]
         for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             if 0 <= nx < w and 0 <= ny < h and not bg[ny][nx]:
                 n = p[nx, ny]
-                if bg_like(n, ref, warm) or (dist(n, c) < 9 and dist(n, ref) < 90 and min(n) > 35
+                if bg_like(n, ref, warm, tol) or (dist(n, c) < 9 and dist(n, ref) < 90 and min(n) > 35
                                              and (warm is None or n[0] - n[2] >= warm)):
                     bg[ny][nx] = True
                     q.append((nx, ny))
     seen = set()                                    # bolsões fechados de fundo (vão da cadeira etc.)
     for y in range(h):
         for x in range(w):
-            if bg[y][x] or (x, y) in seen or not bg_like(p[x, y], ref, warm):
+            if keep_pockets or bg[y][x] or (x, y) in seen or not bg_like(p[x, y], ref, warm, tol):
                 continue
-            comp = _flood(w, h, (x, y), lambda a, b: not bg[b][a] and bg_like(p[a, b], ref, warm))
+            comp = _flood(w, h, (x, y), lambda a, b: not bg[b][a] and bg_like(p[a, b], ref, warm, tol))
             seen.update(comp)
             if len(comp) >= 10:
                 for (a, b) in comp:
@@ -199,13 +253,16 @@ def frames(im, cfg):
     W, H = im.size
     cols, rows, src = cfg["cols"], cfg["rows"], cfg["src"]
     cuts, fixed = cfg.get("cuts", {}), cfg.get("fixed", ())
+    names, each = cfg.get("names", NAMES), cfg.get("center_each", ())
+    row_src = cfg.get("row_src", {})
     cells = {}
-    for r in range(len(NAMES)):
+    for r in range(len(names)):
         for k in range(len(cols)):
             x0, x1 = cols[k], (cols[k + 1] if k + 1 < len(cols) else W)
             y0, y1 = rows[r], rows[r + 1]
             bx0, by0, bx1, by1 = max(0, x0 - MARGIN), max(0, y0 - MARGIN), min(W, x1 + MARGIN), min(H, y1 + MARGIN)
-            img, comps = cutout(im, (bx0, by0, bx1, by1), cfg.get("bg_warm"))
+            img, comps = cutout(im, (bx0, by0, bx1, by1), cfg.get("bg_warm"), cfg.get("bg_tol", 38),
+                                cfg.get("keep_pockets", False))
             lo = cuts.get((r - 1, k), -1) - by0          # cortes com a célula de cima / de baixo
             hi = cuts.get((r, k), H + 1) - by0
             mine = []
@@ -236,11 +293,11 @@ def frames(im, cfg):
 
     # medidas que a configuração não deu: medianas dos quadros (dentro da célula)
     feet = cfg.get("feet") or [None if r == HANG else _median(max(y for _, y in c[2]) - c[4] for c in row_cells(r))
-                               for r in range(len(NAMES))]
+                               for r in range(len(names))]
     hand_top = cfg.get("hand_top")
     if hand_top is None:
         hand_top = _median(min(y for comp in c[1] for _, y in comp) - c[4] for c in row_cells(HANG))
-    ref = _median(v[-1] for (r, k), v in cells.items() if r not in fixed)   # x do personagem
+    ref = _median(v[-1] for (r, k), v in cells.items() if r not in fixed and r not in each)   # x do personagem
     cx = cfg.get("cx", round(ref))
     row_x = {}                                       # linhas fixas centradas no próprio conteúdo
     if cfg.get("center_fixed"):
@@ -249,8 +306,11 @@ def frames(im, cfg):
                                      for c in row_cells(r)))
     out = {}
     for (r, k), (img, mine, main, ox, oy, mcx) in cells.items():
-        dx = round(ref - mcx) if r not in fixed and abs(ref - mcx) > 4 else 0   # só desvio grande
+        src = row_src.get(r, cfg["src"])
+        dx = round(ref - mcx) if r not in fixed and r not in each and abs(ref - mcx) > 4 else 0   # só desvio grande
         left = ox + row_x.get(r, cx) - src // 2
+        if r in each:                            # cada quadro centrado no próprio desenho (voo: a folha espalha)
+            left = (min(x for x, _ in main) + max(x for x, _ in main)) // 2 - src // 2
         top = oy + (hand_top if feet[r] is None else feet[r] - (src - 1))
         right = left + src
         sp, layer = img.load(), Image.new("RGBA", img.size)
@@ -267,7 +327,7 @@ def frames(im, cfg):
         if cfg.get("bill") and r not in cfg.get("no_feet", ()):
             ground, xa, xb = max(y for _, y in main), min(x for x, _ in main) + dx, max(x for x, _ in main) + dx + 1
             feet_like(layer, ground, xa, xb, cfg.get("feet_reach", {}).get(r, 18), cfg["bill"])
-        out[f"{NAMES[r]}{k}"] = to_canvas(layer, left, top, src)
+        out[f"{names[r]}{k}"] = to_canvas(layer, left, top, src)
     return out
 
 
@@ -317,7 +377,7 @@ def main():
     ncols = len(cfg["cols"])
     im = Image.open(src).convert("RGB")
     fr = frames(im, cfg)
-    names = [f"{n}{k}" for n in NAMES for k in range(ncols)]
+    names = [f"{n}{k}" for n in cfg.get("names", NAMES) for k in range(ncols)]
     for ename, path in extras.items():
         for k, f in enumerate(strip_frames(Image.open(path).convert("RGB"), cfg["extra"][ename], cfg.get("bill"))):
             fr[f"{ename}{k}"] = f
