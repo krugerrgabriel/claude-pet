@@ -44,7 +44,8 @@ Linux (GTK/X11) e Windows (Tk, beta). Python puro, sem dependências fora da bib
 - Canvas de 30×30 pixels lógicos, pés na borda de baixo. Girar o canvas é o que faz ele andar na parede e no teto.
 - Define `HIT`, `PIVOT`, `ANIMS` e `render(pen, anim, frame, look, light)`.
 - `ANIMS` tem **todas** as animações de `skins.ANIM_NAMES`: stand, walk, sit, sleep, curious, happy, think,
-  think_walk, work, attention, celebrate, waiting, dangle. `confused` e `cry` são opcionais.
+  think_walk, work, attention, celebrate, waiting, dangle. `confused` e `cry` são opcionais, e também
+  `transform` + `bat` (+ `transform_back`): quem tem, de vez em quando se transforma noutro bicho e voa (ou nada) pela tela.
 - `light` é a cor do status: algum detalhe do personagem precisa mostrar essa cor (antena, cachecol, fruta, brasa…).
 - Desenha só com `pen.px(...)` / `pen.sprite(...)`, ou seja, retângulos de cor sólida. É isso que mantém Linux
   (cairo) e Windows (raster.py) idênticos.

@@ -23,7 +23,7 @@ class Config:
     check_updates: bool = True     # avisa quando sair versão nova (confere a última release do GitHub a cada 12 h)
     troll: bool = False            # modo troll (Configurações): o pet rouba o cursor de vez em quando
     language: str = "auto"         # auto (idioma do sistema), pt ou en; muda pelo menu "Idioma"
-    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, capivara_dev
+    skin: str = "robo"             # personagem: robo, lagartixa, gosminha, capivara, pato, dragao, pato_confuso, capivara_dev, vampiro_axolote
     scale: int = 3                 # tamanho de cada "pixel" do sprite
     fps: int = 30                  # taxa de atualização (movimento); animação tem seu próprio ritmo
     body_color: str = "#5ec4b6"
@@ -49,6 +49,8 @@ class Config:
                                       # segundos (sorteado entre metade e 1,5x) fica confuso; 0 = nunca
     cry_every: float = 180.0          # personagens com animação "cry": em média a cada tantos segundos, com o
                                       # Claude parado ou esperando você, vai pro canto da tela e chora um pouco; 0 = nunca
+    bat_every: float = 65.0           # personagens com animações "transform" e "bat": em média a cada tantos
+                                      # segundos se transforma noutro bicho e voa ou nada um pouco pela tela; 0 = nunca
 
     # Com o Claude parado, o pet digita junto com você
     type_along: bool = True           # você digitando → pet digita junto (só vê SE tem tecla apertada, nunca qual)

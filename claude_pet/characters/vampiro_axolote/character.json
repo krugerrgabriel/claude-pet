@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "id": "vampiro_axolote",
+  "name": {
+    "pt": "Vampirinho Axolote",
+    "en": "Axolotl Vampire"
+  },
+  "description": {
+    "pt": "O vampirinho de capa preta, feito de folha de sprites; de vez em quando vira um axolote cor-de-rosa e nada pela tela",
+    "en": "The little vampire in a black cape, from a sprite sheet; every now and then he turns into a pink axolotl and swims around the screen"
+  },
+  "author": "Nicolas Afonso",
+  "version": "1.0"
+}

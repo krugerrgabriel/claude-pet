@@ -62,6 +62,7 @@ Não curtiu robô? Botão direito → **Configurações…** e escolha outro. To
 | <img src="docs/chars/dragao.gif" width="300"> | **Dragão**, levanta voo e fica voando pela tela enquanto o Claude trabalha | Brasa no peito (e o fogo) |
 | <img src="docs/chars/pato_confuso.gif" width="300"> | **Pato Pistola**, sempre meio perdido, com um cacho em "?" que espeta num "!" quando o Claude precisa de você | Tela do notebook |
 | <img src="docs/chars/capivara_dev.gif" width="300"> | **Capivara Dev**, de fone, óculos e notebook, feita a partir de uma folha de sprites | Sem luzinha: cada estado tem a sua cena |
+| <img src="docs/chars/vampiro_axolote.gif" width="300"> | **Vampirinho Axolote**, um vampirinho de capa preta, feito a partir de uma folha de sprites; de vez em quando vira um axolote cor-de-rosa e nada pela tela | Sem luzinha: cada estado tem a sua cena |
 
 ### 🎨 Personagens customizados
 
@@ -181,7 +182,7 @@ Só se quiser: tudo funciona sem configurar nada.
 
 | Chave | Significado |
 |---|---|
-| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso` ou `capivara_dev` (a janela de **Configurações** grava aqui) |
+| `skin` | Personagem: `robo`, `lagartixa`, `gosminha`, `capivara`, `pato`, `dragao`, `pato_confuso`, `capivara_dev` ou `vampiro_axolote` (a janela de **Configurações** grava aqui) |
 | `pet_name` | Nome usado nos balões (vazio = "Seu pet"; a janela de **Configurações** grava aqui) |
 | `language` | `auto` (segue o idioma do sistema), `pt` ou `en`; a janela de **Configurações** grava aqui |
 | `scale` | Tamanho de cada pixel do sprite (3 ≈ 60 px de altura) |
@@ -193,6 +194,7 @@ Só se quiser: tudo funciona sem configurar nada.
 | `work_hold` | Segundos mínimos em "trabalhando" depois de uma ferramenta, pra não ficar piscando entre pensar e trabalhar (padrão 5) |
 | `monitor` | Índice do monitor, `-1` = principal |
 | `type_along` | `true` (padrão): com o Claude parado e você digitando, ele digita junto |
+| `bat_every` | Só o Vampirinho Axolote: em média a cada tantos segundos ele vira axolote e nada pela tela por 30 segundos (padrão 65; `0` = nunca) |
 
 Todas as chaves são opcionais. Reinicie o Bit depois de editar.
 </details>
